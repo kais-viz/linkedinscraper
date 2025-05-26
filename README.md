@@ -74,7 +74,7 @@ The `config.json` file contains the configuration options for the scraper and th
 - `search_queries`: An array of search query objects, each containing the following keys:
   - `keywords`: The keywords to search for in the job title.
   - `location`: The location to search for jobs.
-  - `f_WT`: The job type filter. Values are as follows:
+  - `f_WT`: The job type filter. Values are as follows: (using url it shows onsite 1, hybrid 3 and remote 2)
         -  0 - onsite
         -  1 - hybrid
         -  2 - remote

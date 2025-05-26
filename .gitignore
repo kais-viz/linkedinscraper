@@ -13,3 +13,6 @@ indeed.py
 *.sh
 *.log
 SupabaseUpload/
+.venv/
+.env
+.aider*
