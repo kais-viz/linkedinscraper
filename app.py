@@ -1,10 +1,12 @@
 from flask import Flask, render_template, jsonify
 import pandas as pd
 import sqlite3
+import pymysql
 import json
 import openai
 from pdfminer.high_level import extract_text
 from flask_cors import CORS
+from sqlalchemy import create_engine
 
 def load_config(file_name):
     # Load the config file
@@ -52,9 +54,20 @@ def job(job_id):
 
 @app.route('/get_all_jobs')
 def get_all_jobs():
-    conn = sqlite3.connect(config["db_path"])
-    query = "SELECT * FROM jobs"
-    df = pd.read_sql_query(query, conn)
+    if config.get("db_type", "sqlite") == "mysql":
+        # MySQL connection
+        engine = create_engine(
+            f"mysql+pymysql://{config['user']}:{config['password']}@{config['host']}/{config['database']}",
+            pool_recycle=3600
+        )
+        query = "SELECT * FROM jobs"
+        df = pd.read_sql_query(query, engine)
+    else:
+        # SQLite connection
+        conn = sqlite3.connect(config["db_path"])
+        query = "SELECT * FROM jobs"
+        df = pd.read_sql_query(query, conn)
+    
     df = df.sort_values(by='id', ascending=False)
     df.reset_index(drop=True, inplace=True)
     jobs = df.to_dict('records')
@@ -62,25 +75,57 @@ def get_all_jobs():
 
 @app.route('/job_details/<int:job_id>')
 def job_details(job_id):
-    conn = sqlite3.connect(config["db_path"])
-    cursor = conn.cursor()
-    cursor.execute("SELECT * FROM jobs WHERE id = ?", (job_id,))
-    job_tuple = cursor.fetchone()
-    conn.close()
-    if job_tuple is not None:
-        # Get the column names from the cursor description
-        column_names = [column[0] for column in cursor.description]
-        # Create a dictionary mapping column names to row values
-        job = dict(zip(column_names, job_tuple))
-        return jsonify(job)
+    if config.get("db_type", "sqlite") == "mysql":
+        # MySQL connection
+        conn = pymysql.connect(
+            host=config['host'],
+            user=config['user'],
+            password=config['password'],
+            database=config['database'],
+            cursorclass=pymysql.cursors.DictCursor
+        )
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM jobs WHERE id = %s", (job_id,))
+        job = cursor.fetchone()
+        conn.close()
+        if job is not None:
+            return jsonify(job)
+        else:
+            return jsonify({"error": "Job not found"}), 404
     else:
-        return jsonify({"error": "Job not found"}), 404
+        # SQLite connection
+        conn = sqlite3.connect(config["db_path"])
+        cursor = conn.cursor()
+        cursor.execute("SELECT * FROM jobs WHERE id = ?", (job_id,))
+        job_tuple = cursor.fetchone()
+        conn.close()
+        if job_tuple is not None:
+            # Get the column names from the cursor description
+            column_names = [column[0] for column in cursor.description]
+            # Create a dictionary mapping column names to row values
+            job = dict(zip(column_names, job_tuple))
+            return jsonify(job)
+        else:
+            return jsonify({"error": "Job not found"}), 404
 
 @app.route('/hide_job/<int:job_id>', methods=['POST'])
 def hide_job(job_id):
-    conn = sqlite3.connect(config["db_path"])
-    cursor = conn.cursor()
-    cursor.execute("UPDATE jobs SET hidden = 1 WHERE id = ?", (job_id,))
+    if config.get("db_type", "sqlite") == "mysql":
+        # MySQL connection
+        conn = pymysql.connect(
+            host=config['host'],
+            user=config['user'],
+            password=config['password'],
+            database=config['database']
+        )
+        cursor = conn.cursor()
+        cursor.execute("UPDATE jobs SET hidden = 1 WHERE id = %s", (job_id,))
+    else:
+        # SQLite connection
+        conn = sqlite3.connect(config["db_path"])
+        cursor = conn.cursor()
+        cursor.execute("UPDATE jobs SET hidden = 1 WHERE id = ?", (job_id,))
+    
     conn.commit()
     conn.close()
     return jsonify({"success": "Job marked as hidden"}), 200
@@ -89,11 +134,26 @@ def hide_job(job_id):
 @app.route('/mark_applied/<int:job_id>', methods=['POST'])
 def mark_applied(job_id):
     print("Applied clicked!")
-    conn = sqlite3.connect(config["db_path"])
-    cursor = conn.cursor()
-    query = "UPDATE jobs SET applied = 1 WHERE id = ?"
-    print(f'Executing query: {query} with job_id: {job_id}')  # Log the query
-    cursor.execute(query, (job_id,))
+    if config.get("db_type", "sqlite") == "mysql":
+        # MySQL connection
+        conn = pymysql.connect(
+            host=config['host'],
+            user=config['user'],
+            password=config['password'],
+            database=config['database']
+        )
+        cursor = conn.cursor()
+        query = "UPDATE jobs SET applied = 1 WHERE id = %s"
+        print(f'Executing query: {query} with job_id: {job_id}')  # Log the query
+        cursor.execute(query, (job_id,))
+    else:
+        # SQLite connection
+        conn = sqlite3.connect(config["db_path"])
+        cursor = conn.cursor()
+        query = "UPDATE jobs SET applied = 1 WHERE id = ?"
+        print(f'Executing query: {query} with job_id: {job_id}')  # Log the query
+        cursor.execute(query, (job_id,))
+    
     conn.commit()
     conn.close()
     return jsonify({"success": "Job marked as applied"}), 200
@@ -101,11 +161,26 @@ def mark_applied(job_id):
 @app.route('/mark_interview/<int:job_id>', methods=['POST'])
 def mark_interview(job_id):
     print("Interview clicked!")
-    conn = sqlite3.connect(config["db_path"])
-    cursor = conn.cursor()
-    query = "UPDATE jobs SET interview = 1 WHERE id = ?"
-    print(f'Executing query: {query} with job_id: {job_id}')
-    cursor.execute(query, (job_id,))
+    if config.get("db_type", "sqlite") == "mysql":
+        # MySQL connection
+        conn = pymysql.connect(
+            host=config['host'],
+            user=config['user'],
+            password=config['password'],
+            database=config['database']
+        )
+        cursor = conn.cursor()
+        query = "UPDATE jobs SET interview = 1 WHERE id = %s"
+        print(f'Executing query: {query} with job_id: {job_id}')
+        cursor.execute(query, (job_id,))
+    else:
+        # SQLite connection
+        conn = sqlite3.connect(config["db_path"])
+        cursor = conn.cursor()
+        query = "UPDATE jobs SET interview = 1 WHERE id = ?"
+        print(f'Executing query: {query} with job_id: {job_id}')
+        cursor.execute(query, (job_id,))
+    
     conn.commit()
     conn.close()
     return jsonify({"success": "Job marked as interview"}), 200
@@ -113,21 +188,50 @@ def mark_interview(job_id):
 @app.route('/mark_rejected/<int:job_id>', methods=['POST'])
 def mark_rejected(job_id):
     print("Rejected clicked!")
-    conn = sqlite3.connect(config["db_path"])
-    cursor = conn.cursor()
-    query = "UPDATE jobs SET rejected = 1 WHERE id = ?"
-    print(f'Executing query: {query} with job_id: {job_id}')
-    cursor.execute(query, (job_id,))
+    if config.get("db_type", "sqlite") == "mysql":
+        # MySQL connection
+        conn = pymysql.connect(
+            host=config['host'],
+            user=config['user'],
+            password=config['password'],
+            database=config['database']
+        )
+        cursor = conn.cursor()
+        query = "UPDATE jobs SET rejected = 1 WHERE id = %s"
+        print(f'Executing query: {query} with job_id: {job_id}')
+        cursor.execute(query, (job_id,))
+    else:
+        # SQLite connection
+        conn = sqlite3.connect(config["db_path"])
+        cursor = conn.cursor()
+        query = "UPDATE jobs SET rejected = 1 WHERE id = ?"
+        print(f'Executing query: {query} with job_id: {job_id}')
+        cursor.execute(query, (job_id,))
+    
     conn.commit()
     conn.close()
     return jsonify({"success": "Job marked as rejected"}), 200
 
 @app.route('/get_cover_letter/<int:job_id>')
 def get_cover_letter(job_id):
-    conn = sqlite3.connect(config["db_path"])
-    cursor = conn.cursor()
-    cursor.execute("SELECT cover_letter FROM jobs WHERE id = ?", (job_id,))
-    cover_letter = cursor.fetchone()
+    if config.get("db_type", "sqlite") == "mysql":
+        # MySQL connection
+        conn = pymysql.connect(
+            host=config['host'],
+            user=config['user'],
+            password=config['password'],
+            database=config['database']
+        )
+        cursor = conn.cursor()
+        cursor.execute("SELECT cover_letter FROM jobs WHERE id = %s", (job_id,))
+        cover_letter = cursor.fetchone()
+    else:
+        # SQLite connection
+        conn = sqlite3.connect(config["db_path"])
+        cursor = conn.cursor()
+        cursor.execute("SELECT cover_letter FROM jobs WHERE id = ?", (job_id,))
+        cover_letter = cursor.fetchone()
+    
     conn.close()
     if cover_letter is not None:
         return jsonify({"cover_letter": cover_letter[0]})
@@ -137,15 +241,29 @@ def get_cover_letter(job_id):
 @app.route('/get_resume/<int:job_id>', methods=['POST'])
 def get_resume(job_id):
     print("Resume clicked!")
-    conn = sqlite3.connect(config["db_path"])
-    cursor = conn.cursor()
-    cursor.execute("SELECT job_description, title, company FROM jobs WHERE id = ?", (job_id,))
-    job_tuple = cursor.fetchone()
-    if job_tuple is not None:
-        # Get the column names from the cursor description
-        column_names = [column[0] for column in cursor.description]
-        # Create a dictionary mapping column names to row values
-        job = dict(zip(column_names, job_tuple))
+    if config.get("db_type", "sqlite") == "mysql":
+        # MySQL connection
+        conn = pymysql.connect(
+            host=config['host'],
+            user=config['user'],
+            password=config['password'],
+            database=config['database'],
+            cursorclass=pymysql.cursors.DictCursor
+        )
+        cursor = conn.cursor()
+        cursor.execute("SELECT job_description, title, company FROM jobs WHERE id = %s", (job_id,))
+        job = cursor.fetchone()
+    else:
+        # SQLite connection
+        conn = sqlite3.connect(config["db_path"])
+        cursor = conn.cursor()
+        cursor.execute("SELECT job_description, title, company FROM jobs WHERE id = ?", (job_id,))
+        job_tuple = cursor.fetchone()
+        if job_tuple is not None:
+            # Get the column names from the cursor description
+            column_names = [column[0] for column in cursor.description]
+            # Create a dictionary mapping column names to row values
+            job = dict(zip(column_names, job_tuple))
     resume = read_pdf(config["resume_path"])
 
     # Check if OpenAI API key is empty
@@ -177,9 +295,14 @@ def get_resume(job_id):
         print(f"Error connecting to OpenAI: {e}")
         return jsonify({"error": f"Error connecting to OpenAI: {e}"}), 500
 
-    query = "UPDATE jobs SET resume = ? WHERE id = ?"
-    print(f'Executing query: {query} with job_id: {job_id} and resume: {response}')
-    cursor.execute(query, (response, job_id))
+    if config.get("db_type", "sqlite") == "mysql":
+        query = "UPDATE jobs SET resume = %s WHERE id = %s"
+        print(f'Executing query: {query} with job_id: {job_id} and resume: {response}')
+        cursor.execute(query, (response, job_id))
+    else:
+        query = "UPDATE jobs SET resume = ? WHERE id = ?"
+        print(f'Executing query: {query} with job_id: {job_id} and resume: {response}')
+        cursor.execute(query, (response, job_id))
     conn.commit()
     conn.close()
     return jsonify({"resume": response}), 200
@@ -187,7 +310,18 @@ def get_resume(job_id):
 @app.route('/get_CoverLetter/<int:job_id>', methods=['POST'])
 def get_CoverLetter(job_id):
     print("CoverLetter clicked!")
-    conn = sqlite3.connect(config["db_path"])
+    if config.get("db_type", "sqlite") == "mysql":
+        # MySQL connection
+        conn = pymysql.connect(
+            host=config['host'],
+            user=config['user'],
+            password=config['password'],
+            database=config['database']
+        )
+    else:
+        # SQLite connection
+        conn = sqlite3.connect(config["db_path"])
+    
     cursor = conn.cursor()
 
     def get_chat_gpt(prompt):
@@ -237,39 +371,80 @@ def get_CoverLetter(job_id):
         if response is None:
             return jsonify({"error": "Failed to get a response from OpenAI."}), 500
 
-    query = "UPDATE jobs SET cover_letter = ? WHERE id = ?"
-    print(f'Executing query: {query} with job_id: {job_id} and cover letter: {response}')
-    cursor.execute(query, (response, job_id))
+    if config.get("db_type", "sqlite") == "mysql":
+        query = "UPDATE jobs SET cover_letter = %s WHERE id = %s"
+        print(f'Executing query: {query} with job_id: {job_id} and cover letter: {response}')
+        cursor.execute(query, (response, job_id))
+    else:
+        query = "UPDATE jobs SET cover_letter = ? WHERE id = ?"
+        print(f'Executing query: {query} with job_id: {job_id} and cover letter: {response}')
+        cursor.execute(query, (response, job_id))
     conn.commit()
     conn.close()
     return jsonify({"cover_letter": response}), 200
 
 def read_jobs_from_db():
-    conn = sqlite3.connect(config["db_path"])
-    query = "SELECT * FROM jobs WHERE hidden = 0"
-    df = pd.read_sql_query(query, conn)
+    if config.get("db_type", "sqlite") == "mysql":
+        # MySQL connection using SQLAlchemy for pandas
+        engine = create_engine(
+            f"mysql+pymysql://{config['user']}:{config['password']}@{config['host']}/{config['database']}",
+            pool_recycle=3600
+        )
+        query = "SELECT * FROM jobs WHERE hidden = 0"
+        df = pd.read_sql_query(query, engine)
+    else:
+        # SQLite connection
+        conn = sqlite3.connect(config["db_path"])
+        query = "SELECT * FROM jobs WHERE hidden = 0"
+        df = pd.read_sql_query(query, conn)
+    
     df = df.sort_values(by='id', ascending=False)
     # df.reset_index(drop=True, inplace=True)
     return df.to_dict('records')
 
 def verify_db_schema():
-    conn = sqlite3.connect(config["db_path"])
-    cursor = conn.cursor()
+    if config.get("db_type", "sqlite") == "mysql":
+        # MySQL connection
+        conn = pymysql.connect(
+            host=config['host'],
+            user=config['user'],
+            password=config['password'],
+            database=config['database']
+        )
+        cursor = conn.cursor()
+        
+        # Check if the table exists
+        cursor.execute(f"SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = '{config['database']}' AND table_name = 'jobs'")
+        if cursor.fetchone()[0] == 1:
+            # Check if columns exist
+            cursor.execute("SHOW COLUMNS FROM jobs LIKE 'cover_letter'")
+            if cursor.fetchone() is None:
+                cursor.execute("ALTER TABLE jobs ADD COLUMN cover_letter TEXT")
+                print("Added cover_letter column to jobs table")
+                
+            cursor.execute("SHOW COLUMNS FROM jobs LIKE 'resume'")
+            if cursor.fetchone() is None:
+                cursor.execute("ALTER TABLE jobs ADD COLUMN resume TEXT")
+                print("Added resume column to jobs table")
+    else:
+        # SQLite connection
+        conn = sqlite3.connect(config["db_path"])
+        cursor = conn.cursor()
 
-    # Get the table information
-    cursor.execute("PRAGMA table_info(jobs)")
-    table_info = cursor.fetchall()
+        # Get the table information
+        cursor.execute("PRAGMA table_info(jobs)")
+        table_info = cursor.fetchall()
 
-    # Check if the "cover_letter" column exists
-    if "cover_letter" not in [column[1] for column in table_info]:
-        # If it doesn't exist, add it
-        cursor.execute("ALTER TABLE jobs ADD COLUMN cover_letter TEXT")
-        print("Added cover_letter column to jobs table")
+        # Check if the "cover_letter" column exists
+        if "cover_letter" not in [column[1] for column in table_info]:
+            # If it doesn't exist, add it
+            cursor.execute("ALTER TABLE jobs ADD COLUMN cover_letter TEXT")
+            print("Added cover_letter column to jobs table")
 
-    if "resume" not in [column[1] for column in table_info]:
-        # If it doesn't exist, add it
-        cursor.execute("ALTER TABLE jobs ADD COLUMN resume TEXT")
-        print("Added resume column to jobs table")
+        if "resume" not in [column[1] for column in table_info]:
+            # If it doesn't exist, add it
+            cursor.execute("ALTER TABLE jobs ADD COLUMN resume TEXT")
+            print("Added resume column to jobs table")
 
     conn.close()
 

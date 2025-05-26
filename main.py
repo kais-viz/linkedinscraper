@@ -1,8 +1,8 @@
 import requests
 import json
-import sqlite3
 import sys
-from sqlite3 import Error
+import pymysql
+from sqlalchemy import create_engine
 from bs4 import BeautifulSoup
 import time as tm
 from itertools import groupby
@@ -132,86 +132,153 @@ def convert_date_format(date_string):
         return None
 
 def create_connection(config):
-    # Create a database connection to a SQLite database
+    # Create a database connection to a MySQL database
     conn = None
-    path = config['db_path']
     try:
-        conn = sqlite3.connect(path) # creates a SQL database in the 'data' directory
-        #print(sqlite3.version)
-    except Error as e:
-        print(e)
+        if config.get('db_type', 'sqlite') == 'mysql':
+            # MySQL connection
+            conn = pymysql.connect(
+                host=config['host'],
+                user=config['user'],
+                password=config['password'],
+                database=config['database']
+            )
+        else:
+            # Fallback to SQLite for backward compatibility
+            import sqlite3
+            conn = sqlite3.connect(config['db_path'])
+    except Exception as e:
+        print(f"Error connecting to database: {e}")
 
     return conn
 
 def create_table(conn, df, table_name):
-    ''''
-    # Create a new table with the data from the dataframe
-    df.to_sql(table_name, conn, if_exists='replace', index=False)
-    print (f"Created the {table_name} table and added {len(df)} records")
-    '''
     # Create a new table with the data from the DataFrame
-    # Prepare data types mapping from pandas to SQLite
-    type_mapping = {
-        'int64': 'INTEGER',
-        'float64': 'REAL',
-        'datetime64[ns]': 'TIMESTAMP',
-        'object': 'TEXT',
-        'bool': 'INTEGER'
-    }
+    config = load_config('config.json')
     
-    # Prepare a string with column names and their types
-    columns_with_types = ', '.join(
-        f'"{column}" {type_mapping[str(df.dtypes[column])]}'
-        for column in df.columns
-    )
-    
-    # Prepare SQL query to create a new table
-    create_table_sql = f"""
-        CREATE TABLE IF NOT EXISTS "{table_name}" (
-            id INTEGER PRIMARY KEY AUTOINCREMENT,
-            {columns_with_types}
-        );
-    """
-    
-    # Execute SQL query
-    cursor = conn.cursor()
-    cursor.execute(create_table_sql)
-    
-    # Commit the transaction
-    conn.commit()
+    if config.get('db_type', 'sqlite') == 'mysql':
+        # MySQL data type mapping
+        type_mapping = {
+            'int64': 'INT',
+            'float64': 'FLOAT',
+            'datetime64[ns]': 'DATETIME',
+            'object': 'TEXT',
+            'bool': 'TINYINT'
+        }
+        
+        # Prepare a string with column names and their types
+        columns_with_types = ', '.join(
+            f"`{column}` {type_mapping[str(df.dtypes[column])]}"
+            for column in df.columns
+        )
+        
+        # Prepare SQL query to create a new table
+        create_table_sql = f"""
+            CREATE TABLE IF NOT EXISTS `{table_name}` (
+                id INT AUTO_INCREMENT PRIMARY KEY,
+                {columns_with_types}
+            );
+        """
+        
+        # Execute SQL query
+        cursor = conn.cursor()
+        cursor.execute(create_table_sql)
+        
+        # Commit the transaction
+        conn.commit()
 
-    # Insert DataFrame records one by one
-    insert_sql = f"""
-        INSERT INTO "{table_name}" ({', '.join(f'"{column}"' for column in df.columns)})
-        VALUES ({', '.join(['?' for _ in df.columns])})
-    """
-    for record in df.to_dict(orient='records'):
-        cursor.execute(insert_sql, list(record.values()))
-    
-    # Commit the transaction
-    conn.commit()
+        # Insert DataFrame records one by one
+        placeholders = ', '.join(['%s' for _ in df.columns])
+        insert_sql = f"""
+            INSERT INTO `{table_name}` ({', '.join(f'`{column}`' for column in df.columns)})
+            VALUES ({placeholders})
+        """
+        
+        for record in df.to_dict(orient='records'):
+            cursor.execute(insert_sql, list(record.values()))
+        
+        # Commit the transaction
+        conn.commit()
+    else:
+        # SQLite implementation (original code)
+        type_mapping = {
+            'int64': 'INTEGER',
+            'float64': 'REAL',
+            'datetime64[ns]': 'TIMESTAMP',
+            'object': 'TEXT',
+            'bool': 'INTEGER'
+        }
+        
+        columns_with_types = ', '.join(
+            f'"{column}" {type_mapping[str(df.dtypes[column])]}'
+            for column in df.columns
+        )
+        
+        create_table_sql = f"""
+            CREATE TABLE IF NOT EXISTS "{table_name}" (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                {columns_with_types}
+            );
+        """
+        
+        cursor = conn.cursor()
+        cursor.execute(create_table_sql)
+        conn.commit()
+
+        insert_sql = f"""
+            INSERT INTO "{table_name}" ({', '.join(f'"{column}"' for column in df.columns)})
+            VALUES ({', '.join(['?' for _ in df.columns])})
+        """
+        for record in df.to_dict(orient='records'):
+            cursor.execute(insert_sql, list(record.values()))
+        
+        conn.commit()
 
     print(f"Created the {table_name} table and added {len(df)} records")
 
 def update_table(conn, df, table_name):
     # Update the existing table with new records.
-    df_existing = pd.read_sql(f'select * from {table_name}', conn)
-
-    # Create a dataframe with unique records in df that are not in df_existing
-    df_new_records = pd.concat([df, df_existing, df_existing]).drop_duplicates(['title', 'company', 'date'], keep=False)
-
-    # If there are new records, append them to the existing table
-    if len(df_new_records) > 0:
-        df_new_records.to_sql(table_name, conn, if_exists='append', index=False)
-        print (f"Added {len(df_new_records)} new records to the {table_name} table")
+    config = load_config('config.json')
+    
+    if config.get('db_type', 'sqlite') == 'mysql':
+        # For MySQL, create a SQLAlchemy engine for pandas
+        engine = create_engine(
+            f"mysql+pymysql://{config['user']}:{config['password']}@{config['host']}/{config['database']}",
+            pool_recycle=3600
+        )
+        df_existing = pd.read_sql(f'SELECT * FROM {table_name}', engine)
+        
+        # Create a dataframe with unique records in df that are not in df_existing
+        df_new_records = pd.concat([df, df_existing, df_existing]).drop_duplicates(['title', 'company', 'date'], keep=False)
+        
+        # If there are new records, append them to the existing table
+        if len(df_new_records) > 0:
+            df_new_records.to_sql(table_name, engine, if_exists='append', index=False)
+            print(f"Added {len(df_new_records)} new records to the {table_name} table")
+        else:
+            print(f"No new records to add to the {table_name} table")
     else:
-        print (f"No new records to add to the {table_name} table")
+        # Original SQLite implementation
+        df_existing = pd.read_sql(f'SELECT * FROM {table_name}', conn)
+        df_new_records = pd.concat([df, df_existing, df_existing]).drop_duplicates(['title', 'company', 'date'], keep=False)
+        
+        if len(df_new_records) > 0:
+            df_new_records.to_sql(table_name, conn, if_exists='append', index=False)
+            print(f"Added {len(df_new_records)} new records to the {table_name} table")
+        else:
+            print(f"No new records to add to the {table_name} table")
 
 def table_exists(conn, table_name):
     # Check if the table already exists in the database
+    config = load_config('config.json')
+    
     cur = conn.cursor()
-    cur.execute(f"SELECT count(name) FROM sqlite_master WHERE type='table' AND name='{table_name}'")
-    if cur.fetchone()[0]==1 :
+    if config.get('db_type', 'sqlite') == 'mysql':
+        cur.execute(f"SELECT COUNT(*) FROM information_schema.tables WHERE table_schema = '{config['database']}' AND table_name = '{table_name}'")
+    else:
+        cur.execute(f"SELECT count(name) FROM sqlite_master WHERE type='table' AND name='{table_name}'")
+    
+    if cur.fetchone()[0] == 1:
         return True
     return False
 

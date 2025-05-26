@@ -46,7 +46,7 @@ function updateJobDetails(job) {
     console.log('Updating job details: ' + job.id); // Log the jobId here
     var html = '<h2 class="job-title">' + job.title + '</h2>';
     html += '<div class="button-container" style="text-align:center">';
-    html += '<a href="' + job.job_url + '" class="job-button">Go to job</a>';
+    html += '<a href="' + job.job_url + '" target="_blank" class="job-button">Go to job</a>';
     html += '<button class="job-button" onclick="markAsCoverLetter(' + job.id + ')">Cover Letter</button>';
     html += '<button class="job-button" onclick="markAsApplied(' + job.id + ')">Applied</button>';
     html += '<button class="job-button" onclick="markAsRejected(' + job.id + ')">Rejected</button>';

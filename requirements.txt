@@ -9,3 +9,5 @@ openai
 pdfminer.six
 flask_cors
 aider-install
+pymysql
+sqlalchemy 
