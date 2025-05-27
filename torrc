@@ -1,0 +1,17 @@
+# See https://2019.www.torproject.org/docs/tor-manual.html.en
+
+StrictNodes 1
+ExitNodes {US}
+ExitPolicy reject *:*
+
+# NewCircuitPeriod 15
+MaxCircuitDirtiness 6000
+CircuitBuildTimeout 120
+SocksTimeout 30
+
+# Control Port settings
+ControlPort 0.0.0.0:9051
+# Use cookie authentication
+CookieAuthentication 0
+
+HashedControlPassword 16:4358D633B582C9A960A591623B301CD2035C78D5BE809C37CE68872AC1
