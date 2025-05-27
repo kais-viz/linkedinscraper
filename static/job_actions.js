@@ -14,17 +14,20 @@ async function showJobDetails(jobId) {
 
     updateJobDetails(jobData);
 
+    /* Cover letter section commented out
     if ('cover_letter' in jobData) {
         updateCoverLetter(jobData.cover_letter);
     } else {
         updateCoverLetter(null);
     }
+    */
 }
 
 
 
 
 
+/* Cover letter function commented out
 function updateCoverLetter(coverLetter) {
     var coverLetterPane = document.getElementById('cover-letter-pane');
     // Check if the coverLetterPane exists
@@ -38,12 +41,13 @@ function updateCoverLetter(coverLetter) {
         }
     }
 }
+*/
 
 
 
 function updateJobDetails(job) {
     var jobDetailsDiv = document.getElementById('job-details');
-    var coverLetterDiv = document.getElementById('bottom-pane'); // Get the cover letter div
+    // var coverLetterDiv = document.getElementById('bottom-pane'); // Get the cover letter div - commented out
     console.log('Updating job details: ' + job.id); // Log the jobId here
     var html = '<h2 class="job-title">' + job.title + '</h2>';
     
@@ -90,6 +94,7 @@ function updateJobDetails(job) {
     html += '<div class="job-description">' + formattedDescription + '</div>';
 
     jobDetailsDiv.innerHTML = html;
+    /* Cover letter section commented out
     if (job.cover_letter) {
         // Update the cover letter div with formatted text using markdown
         var formattedCoverLetter = markdownToHtml(job.cover_letter);
@@ -98,6 +103,7 @@ function updateJobDetails(job) {
         // Clear the cover letter div if no cover letter exists
         coverLetterDiv.innerHTML = '';
     }
+    */
 }
 
 
@@ -185,6 +191,7 @@ function markAsInterview(jobId) {
         });
 }
 
+/* Resizer functionality commented out since we don't need it without the cover letter section
 var resizer = document.getElementById('resizer');
 var jobDetails = document.getElementById('job-details');
 var bottomPane = document.getElementById('bottom-pane');
@@ -208,3 +215,4 @@ function stopDrag() {
     document.removeEventListener('mousemove', drag);
     document.removeEventListener('mouseup', stopDrag);
 }
+*/
