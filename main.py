@@ -84,7 +84,9 @@ def transform(soup):
 
 
 def transform_job(soup):
+    # Extract job description
     div = soup.find("div", class_="description__text description__text--rich")
+    job_description = ""
     if div:
         # Remove unwanted elements
         for element in div.find_all(["span", "a"]):
@@ -100,9 +102,28 @@ def transform_job(soup):
         text = text.replace("::marker", "-")
         text = text.replace("-\n", "- ")
         text = text.replace("Show less", "").replace("Show more", "")
-        return text
+        job_description = text
     else:
-        return "Could not find Job Description"
+        job_description = "Could not find Job Description"
+    
+    # Extract job criteria (seniority level, employment type, etc.)
+    job_criteria = {}
+    criteria_list = soup.find("ul", class_="description__job-criteria-list")
+    
+    if criteria_list:
+        for item in criteria_list.find_all("li", class_="description__job-criteria-item"):
+            header = item.find("h3", class_="description__job-criteria-subheader")
+            text = item.find("span", class_="description__job-criteria-text")
+            
+            if header and text:
+                key = header.text.strip().lower().replace(' ', '_')
+                value = text.text.strip()
+                job_criteria[key] = value
+    
+    return {
+        "description": job_description,
+        "criteria": job_criteria
+    }
 
 
 def safe_detect(text):
@@ -163,6 +184,20 @@ def remove_irrelevant_jobs(joblist, config):
             )
         ]
         if len(config["company_exclude"]) > 0
+        else new_joblist
+    )
+    
+    # Filter out jobs based on seniority level
+    new_joblist = (
+        [
+            job
+            for job in new_joblist
+            if "seniority_level" not in job or not any(
+                level.lower() in job["seniority_level"].lower()
+                for level in config["seniority_exclude"]
+            )
+        ]
+        if "seniority_exclude" in config and len(config["seniority_exclude"]) > 0
         else new_joblist
     )
 
@@ -244,7 +279,21 @@ def create_table(conn, df, table_name):
         create_table_sql = f"""
             CREATE TABLE IF NOT EXISTS `{table_name}` (
                 id INT AUTO_INCREMENT PRIMARY KEY,
-                {columns_with_types}
+                title TEXT,
+                company TEXT,
+                location TEXT,
+                date TEXT,
+                job_url TEXT,
+                job_description TEXT,
+                applied INT DEFAULT 0,
+                hidden INT DEFAULT 0,
+                interview INT DEFAULT 0,
+                rejected INT DEFAULT 0,
+                seniority_level TEXT,
+                employment_type TEXT,
+                job_function TEXT,
+                industries TEXT,
+                date_loaded TEXT
             );
         """
 
@@ -315,12 +364,35 @@ def update_table(conn, df, table_name):
             f"mysql+pymysql://{config['user']}:{config['password']}@{config['host']}/{config['database']}",
             pool_recycle=3600,
         )
+        
+        # First, check if the table has all required columns
+        cursor = conn.cursor()
+        cursor.execute(f"SHOW COLUMNS FROM {table_name}")
+        existing_columns = [column[0] for column in cursor.fetchall()]
+        
+        # Check for required columns
+        required_columns = ['title', 'company', 'date', 'job_url', 'job_description']
+        missing_columns = [col for col in required_columns if col not in existing_columns]
+        
+        # Add any missing columns
+        for col in missing_columns:
+            cursor.execute(f"ALTER TABLE {table_name} ADD COLUMN `{col}` TEXT")
+            print(f"Added missing column {col} to {table_name} table")
+        
+        if missing_columns:
+            conn.commit()
+        
+        # Now proceed with the update
         df_existing = pd.read_sql(f"SELECT * FROM {table_name}", engine)
 
         # Create a dataframe with unique records in df that are not in df_existing
-        df_new_records = pd.concat([df, df_existing, df_existing]).drop_duplicates(
-            ["title", "company", "date"], keep=False
-        )
+        if not df_existing.empty and 'title' in df_existing.columns and 'company' in df_existing.columns and 'date' in df_existing.columns:
+            df_new_records = pd.concat([df, df_existing, df_existing]).drop_duplicates(
+                ["title", "company", "date"], keep=False
+            )
+        else:
+            # If the table is empty or missing key columns, all records are new
+            df_new_records = df
 
         # If there are new records, append them to the existing table
         if len(df_new_records) > 0:
@@ -357,6 +429,17 @@ def table_exists(conn, table_name):
         )
 
     if cur.fetchone()[0] == 1:
+        # Table exists, now check if it has the required structure
+        if config.get("db_type", "sqlite") == "mysql":
+            try:
+                cur.execute(f"SELECT title, company, date FROM {table_name} LIMIT 1")
+                cur.fetchone()  # Just to execute the query and see if it works
+            except Exception as e:
+                print(f"Table {table_name} exists but has incorrect structure: {e}")
+                # Drop the table so it can be recreated with correct structure
+                cur.execute(f"DROP TABLE {table_name}")
+                conn.commit()
+                return False
         return True
     return False
 
@@ -449,7 +532,22 @@ def main(config_file):
                 "Found new job: ", job["title"], "at ", job["company"], job["job_url"]
             )
             desc_soup = get_with_retry(job["job_url"], config)
-            job["job_description"] = transform_job(desc_soup)
+            job_data = transform_job(desc_soup)
+            
+            # Add job description
+            job["job_description"] = job_data["description"]
+            
+            # Add job criteria if available
+            criteria = job_data["criteria"]
+            if "seniority_level" in criteria:
+                job["seniority_level"] = criteria["seniority_level"]
+            if "employment_type" in criteria:
+                job["employment_type"] = criteria["employment_type"]
+            if "job_function" in criteria:
+                job["job_function"] = criteria["job_function"]
+            if "industries" in criteria:
+                job["industries"] = criteria["industries"]
+            
             language = safe_detect(job["job_description"])
             if language not in config["languages"]:
                 print("Job description language not supported: ", language)

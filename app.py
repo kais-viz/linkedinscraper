@@ -75,7 +75,8 @@ def get_all_jobs():
         query = "SELECT * FROM jobs"
         df = pd.read_sql_query(query, conn)
 
-    df = df.sort_values(by="id", ascending=False)
+    # df = df.sort_values(by="id", ascending=False)
+    df = df.sort_values(by=["date", "id"], ascending=[False, False])
     df.reset_index(drop=True, inplace=True)
     jobs = df.to_dict("records")
     return jsonify(jobs)
@@ -446,7 +447,8 @@ def read_jobs_from_db():
         query = "SELECT * FROM jobs WHERE hidden = 0"
         df = pd.read_sql_query(query, conn)
 
-    df = df.sort_values(by="id", ascending=False)
+    # df = df.sort_values(by="id", ascending=False)
+    df = df.sort_values(by=["date", "id"], ascending=[False, False])
     # df.reset_index(drop=True, inplace=True)
     return df.to_dict("records")
 
@@ -477,6 +479,26 @@ def verify_db_schema():
             if cursor.fetchone() is None:
                 cursor.execute("ALTER TABLE jobs ADD COLUMN resume TEXT")
                 print("Added resume column to jobs table")
+
+            cursor.execute("SHOW COLUMNS FROM jobs LIKE 'seniority_level'")
+            if cursor.fetchone() is None:
+                cursor.execute("ALTER TABLE jobs ADD COLUMN seniority_level TEXT")
+                print("Added seniority_level column to jobs table")
+
+            cursor.execute("SHOW COLUMNS FROM jobs LIKE 'employment_type'")
+            if cursor.fetchone() is None:
+                cursor.execute("ALTER TABLE jobs ADD COLUMN employment_type TEXT")
+                print("Added employment_type column to jobs table")
+
+            cursor.execute("SHOW COLUMNS FROM jobs LIKE 'job_function'")
+            if cursor.fetchone() is None:
+                cursor.execute("ALTER TABLE jobs ADD COLUMN job_function TEXT")
+                print("Added job_function column to jobs table")
+
+            cursor.execute("SHOW COLUMNS FROM jobs LIKE 'industries'")
+            if cursor.fetchone() is None:
+                cursor.execute("ALTER TABLE jobs ADD COLUMN industries TEXT")
+                print("Added industries column to jobs table")
     else:
         # SQLite connection
         conn = sqlite3.connect(config["db_path"])
@@ -496,6 +518,26 @@ def verify_db_schema():
             # If it doesn't exist, add it
             cursor.execute("ALTER TABLE jobs ADD COLUMN resume TEXT")
             print("Added resume column to jobs table")
+
+        if "seniority_level" not in [column[1] for column in table_info]:
+            # If it doesn't exist, add it
+            cursor.execute("ALTER TABLE jobs ADD COLUMN seniority_level TEXT")
+            print("Added seniority_level column to jobs table")
+
+        if "employment_type" not in [column[1] for column in table_info]:
+            # If it doesn't exist, add it
+            cursor.execute("ALTER TABLE jobs ADD COLUMN employment_type TEXT")
+            print("Added employment_type column to jobs table")
+
+        if "job_function" not in [column[1] for column in table_info]:
+            # If it doesn't exist, add it
+            cursor.execute("ALTER TABLE jobs ADD COLUMN job_function TEXT")
+            print("Added job_function column to jobs table")
+
+        if "industries" not in [column[1] for column in table_info]:
+            # If it doesn't exist, add it
+            cursor.execute("ALTER TABLE jobs ADD COLUMN industries TEXT")
+            print("Added industries column to jobs table")
 
     conn.close()
 

@@ -45,6 +45,25 @@ function updateJobDetails(job) {
     var coverLetterDiv = document.getElementById('bottom-pane'); // Get the cover letter div
     console.log('Updating job details: ' + job.id); // Log the jobId here
     var html = '<h2 class="job-title">' + job.title + '</h2>';
+    
+    // Add job criteria if available
+    if (job.seniority_level || job.employment_type || job.job_function || job.industries) {
+        html += '<div class="job-criteria" style="margin: 10px 0; padding: 10px; background-color: #f9f9f9; border-radius: 5px;">';
+        if (job.seniority_level) {
+            html += '<div class="criteria-item"><strong>Seniority Level:</strong> ' + job.seniority_level + '</div>';
+        }
+        if (job.employment_type) {
+            html += '<div class="criteria-item"><strong>Employment Type:</strong> ' + job.employment_type + '</div>';
+        }
+        if (job.job_function) {
+            html += '<div class="criteria-item"><strong>Job Function:</strong> ' + job.job_function + '</div>';
+        }
+        if (job.industries) {
+            html += '<div class="criteria-item"><strong>Industries:</strong> ' + job.industries + '</div>';
+        }
+        html += '</div>';
+    }
+    
     html += '<div class="button-container" style="text-align:center">';
     html += '<a href="' + job.job_url + '" target="_blank" class="job-button">Go to job</a>';
     html += '<button class="job-button" onclick="markAsCoverLetter(' + job.id + ')">Cover Letter</button>';
