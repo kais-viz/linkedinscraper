@@ -72,13 +72,13 @@ function updateJobDetails(job) {
     }
     html += '</div>';
     
-    html += '<div class="button-container" style="text-align:center">';
-    html += '<a href="' + job.job_url + '" target="_blank" class="job-button">Go to job</a>';
-    html += '<button class="job-button" onclick="markAsCoverLetter(' + job.id + ')">Cover Letter</button>';
+    html += '<div class="button-container">';
+    html += '<a href="' + job.job_url + '" target="_blank" style="background-color: #0058db;" class="job-button">Go to job</a>';
+    // html += '<button class="job-button" onclick="markAsCoverLetter(' + job.id + ')">Cover Letter</button>';
     html += '<button class="job-button" onclick="markAsApplied(' + job.id + ')">Applied</button>';
-    html += '<button class="job-button" onclick="markAsRejected(' + job.id + ')">Rejected</button>';
-    html += '<button class="job-button" onclick="markAsInterview(' + job.id + ')">Interview</button>';
-    html += '<button class="job-button" onclick="hideJob(' + job.id + ')">Hide</button>';
+    html += '<button class="job-button" style="background-color: #cc130e;" onclick="markAsRejected(' + job.id + ')">Rejected</button>';
+    html += '<button class="job-button" style="background-color: #a9b024;" onclick="markAsInterview(' + job.id + ')">Interview</button>';
+    html += '<button class="job-button" style="background-color: #5f5f5e;" onclick="hideJob(' + job.id + ')">Hide</button>';
     html += '</div>';
     
     // Format job description using markdown
