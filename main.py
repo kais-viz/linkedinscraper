@@ -242,6 +242,7 @@ def convert_date_format(date_string):
 def create_connection(config):
     # Create a database connection to a MySQL database
     conn = None
+    engine = None
     try:
         if config.get("db_type", "sqlite") == "mysql":
             # MySQL connection
@@ -251,15 +252,22 @@ def create_connection(config):
                 password=config["password"],
                 database=config["database"],
             )
+            # Create SQLAlchemy engine for pandas
+            engine = create_engine(
+                f"mysql+pymysql://{config['user']}:{config['password']}@{config['host']}/{config['database']}",
+                pool_recycle=3600,
+            )
         else:
             # Fallback to SQLite for backward compatibility
             import sqlite3
 
             conn = sqlite3.connect(config["db_path"])
+            # Create SQLAlchemy engine for pandas
+            engine = create_engine(f"sqlite:///{config['db_path']}")
     except Exception as e:
         print(f"Error connecting to database: {e}")
 
-    return conn
+    return conn, engine
 
 
 def create_table(conn, df, table_name):
@@ -361,16 +369,12 @@ def create_table(conn, df, table_name):
     print(f"Created the {table_name} table and added {len(df)} records")
 
 
-def update_table(conn, df, table_name):
+def update_table(conn, engine, df, table_name):
     # Update the existing table with new records.
     config = load_config("config.json")
 
     if config.get("db_type", "sqlite") == "mysql":
-        # For MySQL, create a SQLAlchemy engine for pandas
-        engine = create_engine(
-            f"mysql+pymysql://{config['user']}:{config['password']}@{config['host']}/{config['database']}",
-            pool_recycle=3600,
-        )
+        # Use the provided SQLAlchemy engine
         
         # First, check if the table has all required columns
         cursor = conn.cursor()
@@ -487,19 +491,19 @@ def get_jobcards(config):
     return all_jobs
 
 
-def find_new_jobs(all_jobs, conn, config):
+def find_new_jobs(all_jobs, conn, engine, config):
     # From all_jobs, find the jobs that are not already in the database. Function checks both the jobs and filtered_jobs tables.
     jobs_tablename = config["jobs_tablename"]
     filtered_jobs_tablename = config["filtered_jobs_tablename"]
     jobs_db = pd.DataFrame()
     filtered_jobs_db = pd.DataFrame()
-    if conn is not None:
+    if conn is not None and engine is not None:
         if table_exists(conn, jobs_tablename):
             query = f"SELECT * FROM {jobs_tablename}"
-            jobs_db = pd.read_sql_query(query, conn)
+            jobs_db = pd.read_sql_query(query, engine)
         if table_exists(conn, filtered_jobs_tablename):
             query = f"SELECT * FROM {filtered_jobs_tablename}"
-            filtered_jobs_db = pd.read_sql_query(query, conn)
+            filtered_jobs_db = pd.read_sql_query(query, engine)
 
     new_joblist = [
         job
@@ -522,9 +526,9 @@ def main(config_file):
     ]  # name of the table to store the jobs that have been filtered out based on description keywords (so that in future they are not scraped again)
     # Scrape search results page and get job cards. This step might take a while based on the number of pages and search queries.
     all_jobs = get_jobcards(config)
-    conn = create_connection(config)
+    conn, engine = create_connection(config)
     # filtering out jobs that are already in the database
-    all_jobs = find_new_jobs(all_jobs, conn, config)
+    all_jobs = find_new_jobs(all_jobs, conn, engine, config)
     print("Total new jobs found after comparing to the database: ", len(all_jobs))
 
     if len(all_jobs) > 0:
@@ -575,13 +579,13 @@ def main(config_file):
         if conn is not None:
             # Update or Create the database table for the job list
             if table_exists(conn, jobs_tablename):
-                update_table(conn, df, jobs_tablename)
+                update_table(conn, engine, df, jobs_tablename)
             else:
                 create_table(conn, df, jobs_tablename)
 
             # Update or Create the database table for the filtered out jobs
             if table_exists(conn, filtered_jobs_tablename):
-                update_table(conn, df_filtered, filtered_jobs_tablename)
+                update_table(conn, engine, df_filtered, filtered_jobs_tablename)
             else:
                 create_table(conn, df_filtered, filtered_jobs_tablename)
         else:
