@@ -13,7 +13,7 @@ services:
     cap_add:
       - NET_ADMIN
     # Doc https://github.com/qdm12/gluetun
-    env_file: env_vars/.env-proxy
+    env_file: .env
     expose:
       - 2090
       - 5566
@@ -37,7 +37,7 @@ services:
       context: ./alpine-tor
       dockerfile: Dockerfile
     stop_grace_period: 1s
-    env_file: env_vars/.env-proxy
+    env_file: .env
     volumes:
       - ./torrc:/etc/tor/torrc
     network_mode: service:gluetun
