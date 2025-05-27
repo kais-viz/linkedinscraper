@@ -17,11 +17,13 @@ services:
     expose:
       - 2090
       - 5566
+      - 8888 #HTTP proxy port
       - 9050 #Tor socks port
       - 9051 #Tor control port
     ports:
       - "2090:2090"
       - "5566:5566"
+      - "8888:8888" #HTTP proxy port
       - "9051:9051"
     networks:
       - shared-network
