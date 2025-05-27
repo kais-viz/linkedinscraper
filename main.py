@@ -79,6 +79,7 @@ def transform(soup):
             "hidden": 0,
             "interview": 0,
             "rejected": 0,
+            "starred": 0,
         }
         joblist.append(job)
     return joblist
@@ -305,6 +306,7 @@ def create_table(conn, df, table_name):
                 hidden INT DEFAULT 0,
                 interview INT DEFAULT 0,
                 rejected INT DEFAULT 0,
+                starred INT DEFAULT 0,
                 seniority_level TEXT,
                 employment_type TEXT,
                 job_function TEXT,
@@ -383,7 +385,7 @@ def update_table(conn, engine, df, table_name):
         existing_columns = [column[0] for column in cursor.fetchall()]
         
         # Check for required columns
-        required_columns = ['title', 'company', 'date', 'job_url', 'job_description']
+        required_columns = ['title', 'company', 'date', 'job_url', 'job_description', 'starred']
         missing_columns = [col for col in required_columns if col not in existing_columns]
         
         # Add any missing columns
@@ -572,6 +574,13 @@ def main(config_file):
         filtered_list = [job for job in job_list if job not in jobs_to_add]
         df = pd.DataFrame(jobs_to_add)
         df_filtered = pd.DataFrame(filtered_list)
+        
+        # Ensure starred column exists
+        if 'starred' not in df.columns:
+            df['starred'] = 0
+        if 'starred' not in df_filtered.columns:
+            df_filtered['starred'] = 0
+            
         df["date_loaded"] = datetime.now()
         df_filtered["date_loaded"] = datetime.now()
         df["date_loaded"] = df["date_loaded"].astype(str)
