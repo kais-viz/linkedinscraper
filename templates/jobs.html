@@ -145,7 +145,19 @@
         <div class="row">
             <div class="column">
                 <!-- Display the list of jobs -->
-                <h2>Jobs List</h2>
+                <h2>Jobs List (<span id="job-count">{{ jobs|length }}</span>)</h2>
+                
+                <!-- Search box -->
+                <div class="search-container">
+                    <input type="text" id="job-search" placeholder="Search in titles and descriptions..." onkeyup="searchJobs()">
+                    <button onclick="clearSearch()">Clear</button>
+                </div>
+                
+                <!-- Location search box -->
+                <div class="search-container">
+                    <input type="text" id="location-search" placeholder="Filter by location..." onkeyup="filterByLocation()">
+                    <button onclick="clearLocationFilter()">Clear</button>
+                </div>
                 
                 {% for job in jobs %}
                 <a class="{% if job.rejected == 1 %}job-item job-item-rejected{% elif job.interview == 1 %}job-item job-item-interview{% elif job.applied == 1 %}job-item job-item-applied{% else %}job-item{% endif %}{% if job.starred == 1 %} job-item-starred{% endif %}"  href="#" onclick="event.preventDefault(); showJobDetails('{{ job.id }}')" data-job-id="{{ job.id }}">
@@ -206,6 +218,36 @@
                 transform: translateY(-50%);
                 color: #ffd700;
                 font-size: 18px;
+            }
+            
+            /* Search box styles */
+            .search-container {
+                margin-bottom: 15px;
+                display: flex;
+            }
+            
+            #job-search {
+                flex-grow: 1;
+                padding: 8px;
+                border: 1px solid #ccc;
+                border-radius: 4px;
+                margin-right: 5px;
+            }
+            
+            .search-container button {
+                padding: 8px 15px;
+                background-color: #f0f0f0;
+                border: 1px solid #ccc;
+                border-radius: 4px;
+                cursor: pointer;
+            }
+            
+            .search-container button:hover {
+                background-color: #e0e0e0;
+            }
+            
+            .search-hidden, .location-hidden {
+                display: none !important;
             }
         </style>
     </body>

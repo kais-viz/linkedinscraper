@@ -224,8 +224,118 @@ function hideJob(jobId) {
                     var jobDetailsDiv = document.getElementById('job-details');
                     jobDetailsDiv.innerHTML = '';
                 }
+                
+                // Update job count
+                updateJobCount();
             }
         });
+}
+
+// Function to update the job count
+function updateJobCount() {
+    const jobCountElement = document.getElementById('job-count');
+    if (jobCountElement) {
+        const hiddenJobs = document.querySelectorAll('.job-item[style="display: none;"], .job-item.search-hidden, .job-item.location-hidden').length;
+        const totalJobs = document.querySelectorAll('.job-item').length;
+        const remainingJobs = totalJobs - hiddenJobs;
+        jobCountElement.textContent = remainingJobs;
+    }
+}
+
+// Function to search jobs by title and description
+function searchJobs() {
+    const searchText = document.getElementById('job-search').value.toLowerCase();
+    const jobItems = document.querySelectorAll('.job-item');
+    let visibleCount = 0;
+    
+    jobItems.forEach(async (jobItem) => {
+        const jobId = jobItem.getAttribute('data-job-id');
+        const jobTitle = jobItem.querySelector('h3').textContent.toLowerCase();
+        const jobCompany = jobItem.querySelector('p').textContent.toLowerCase();
+        
+        // Don't count already hidden jobs
+        if (jobItem.style.display === 'none') {
+            return;
+        }
+        
+        // First check if the search term is in the title or company
+        if (jobTitle.includes(searchText) || jobCompany.includes(searchText)) {
+            jobItem.classList.remove('search-hidden');
+            visibleCount++;
+            return;
+        }
+        
+        // If not found in title/company, fetch job details to check description
+        try {
+            const response = await fetch('/job_details/' + jobId);
+            const jobData = await response.json();
+            const jobDescription = jobData.job_description.toLowerCase();
+            
+            if (jobDescription.includes(searchText)) {
+                jobItem.classList.remove('search-hidden');
+                visibleCount++;
+            } else {
+                jobItem.classList.add('search-hidden');
+            }
+        } catch (error) {
+            console.error('Error fetching job details:', error);
+        }
+    });
+    
+    // Update the job count
+    document.getElementById('job-count').textContent = visibleCount;
+}
+
+// Function to clear the search
+function clearSearch() {
+    document.getElementById('job-search').value = '';
+    const jobItems = document.querySelectorAll('.job-item');
+    
+    jobItems.forEach(jobItem => {
+        jobItem.classList.remove('search-hidden');
+    });
+    
+    // Update the job count
+    updateJobCount();
+}
+
+// Function to filter jobs by location
+function filterByLocation() {
+    const locationText = document.getElementById('location-search').value.toLowerCase();
+    const jobItems = document.querySelectorAll('.job-item');
+    let visibleCount = 0;
+    
+    jobItems.forEach(jobItem => {
+        // Don't count already hidden jobs from main search
+        if (jobItem.classList.contains('search-hidden') || jobItem.style.display === 'none') {
+            return;
+        }
+        
+        const jobLocation = jobItem.querySelector('p').textContent.toLowerCase();
+        
+        if (locationText === '' || jobLocation.includes(locationText)) {
+            jobItem.classList.remove('location-hidden');
+            visibleCount++;
+        } else {
+            jobItem.classList.add('location-hidden');
+        }
+    });
+    
+    // Update the job count
+    document.getElementById('job-count').textContent = visibleCount;
+}
+
+// Function to clear the location filter
+function clearLocationFilter() {
+    document.getElementById('location-search').value = '';
+    const jobItems = document.querySelectorAll('.job-item');
+    
+    jobItems.forEach(jobItem => {
+        jobItem.classList.remove('location-hidden');
+    });
+    
+    // Update the job count
+    updateJobCount();
 }
 
 
