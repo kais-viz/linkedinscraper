@@ -10,4 +10,6 @@ pdfminer.six
 flask_cors
 aider-install
 pymysql
-sqlalchemy 
+sqlalchemy
+markdown
+html2markdown                                                                                                                                 

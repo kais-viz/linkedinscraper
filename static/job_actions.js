@@ -33,7 +33,8 @@ function updateCoverLetter(coverLetter) {
         if (coverLetter === null) {
             coverLetterPane.innerText = 'No cover letter exists for this job.';
         } else {
-            coverLetterPane.innerText = coverLetter;
+            // Use markdown formatting for cover letter
+            coverLetterPane.innerHTML = markdownToHtml(coverLetter);
         }
     }
 }
@@ -46,23 +47,30 @@ function updateJobDetails(job) {
     console.log('Updating job details: ' + job.id); // Log the jobId here
     var html = '<h2 class="job-title">' + job.title + '</h2>';
     
-    // Add job criteria if available
-    if (job.seniority_level || job.employment_type || job.job_function || job.industries) {
-        html += '<div class="job-criteria" style="margin: 10px 0; padding: 10px; background-color: #f9f9f9; border-radius: 5px;">';
-        if (job.seniority_level) {
-            html += '<div class="criteria-item"><strong>Seniority Level:</strong> ' + job.seniority_level + '</div>';
-        }
-        if (job.employment_type) {
-            html += '<div class="criteria-item"><strong>Employment Type:</strong> ' + job.employment_type + '</div>';
-        }
-        if (job.job_function) {
-            html += '<div class="criteria-item"><strong>Job Function:</strong> ' + job.job_function + '</div>';
-        }
-        if (job.industries) {
-            html += '<div class="criteria-item"><strong>Industries:</strong> ' + job.industries + '</div>';
-        }
-        html += '</div>';
+    // Add date with day of week in bold above company
+    var formattedDate = formatDateWithDayOfWeek(job.date);
+    
+    
+    // Add job criteria including company and location
+    html += '<div class="job-criteria" style="margin: 10px 0; padding: 10px; background-color: #f9f9f9; border-radius: 5px;">';
+    html += '<div class="criteria-item job-date"><strong>Posted:</strong> ' + formattedDate + '</div>';
+    html += '<div class="criteria-item"><strong>Company:</strong> ' + job.company + '</div>';
+    if (job.location) {
+        html += '<div class="criteria-item"><strong>Location:</strong> ' + job.location + '</div>';
     }
+    if (job.seniority_level) {
+        html += '<div class="criteria-item"><strong>Seniority Level:</strong> ' + job.seniority_level + '</div>';
+    }
+    if (job.employment_type) {
+        html += '<div class="criteria-item"><strong>Employment Type:</strong> ' + job.employment_type + '</div>';
+    }
+    if (job.job_function) {
+        html += '<div class="criteria-item"><strong>Job Function:</strong> ' + job.job_function + '</div>';
+    }
+    if (job.industries) {
+        html += '<div class="criteria-item"><strong>Industries:</strong> ' + job.industries + '</div>';
+    }
+    html += '</div>';
     
     html += '<div class="button-container" style="text-align:center">';
     html += '<a href="' + job.job_url + '" target="_blank" class="job-button">Go to job</a>';
@@ -72,14 +80,20 @@ function updateJobDetails(job) {
     html += '<button class="job-button" onclick="markAsInterview(' + job.id + ')">Interview</button>';
     html += '<button class="job-button" onclick="hideJob(' + job.id + ')">Hide</button>';
     html += '</div>';
-    html += '<p class="job-detail">' + job.company + ', ' + job.location + '</p>';
-    html += '<p class="job-detail">' + job.date + '</p>';
-    html += '<p class="job-description">' + job.job_description + '</p>';
+    
+    // Format job description using markdown
+    var formattedDescription = '';
+    if (job.job_description) {
+        formattedDescription = markdownToHtml(job.job_description);
+    }
+    
+    html += '<div class="job-description">' + formattedDescription + '</div>';
 
     jobDetailsDiv.innerHTML = html;
     if (job.cover_letter) {
-        // Update the cover letter div
-        coverLetterDiv.innerHTML = '<p class="job-description">' + job.cover_letter + '</p>';
+        // Update the cover letter div with formatted text using markdown
+        var formattedCoverLetter = markdownToHtml(job.cover_letter);
+        coverLetterDiv.innerHTML = '<div class="job-description">' + formattedCoverLetter + '</div>';
     } else {
         // Clear the cover letter div if no cover letter exists
         coverLetterDiv.innerHTML = '';

@@ -6,6 +6,7 @@
         <style>
             body {
                 font-family: Arial, sans-serif;
+                line-height: 1.5;
             }
             .row {
                 display: flex;
@@ -66,7 +67,18 @@
                 border-radius: 5px;
             }
             .job-description {
-                white-space: pre-line;
+                line-height: 1.6;
+                margin-top: 20px;
+            }
+            .job-description p {
+                margin-bottom: 15px;
+            }
+            .job-description ul, .job-description ol {
+                margin-left: 20px;
+                margin-bottom: 15px;
+            }
+            .job-description li {
+                margin-bottom: 5px;
             }
             .job-item.job-item-selected {
                 background-color: #c3c3c3;
@@ -156,6 +168,7 @@
                 </div>
             </div>
         </div>
+        <script src="/static/job_formatting.js"></script>
         <script src="/static/job_actions.js"></script>
     </body>
     

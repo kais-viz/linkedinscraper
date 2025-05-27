@@ -83,26 +83,33 @@ def transform(soup):
     return joblist
 
 
+import html2markdown
+
 def transform_job(soup):
     # Extract job description
     div = soup.find("div", class_="description__text description__text--rich")
     job_description = ""
     if div:
         # Remove unwanted elements
-        for element in div.find_all(["span", "a"]):
+        for element in div.find_all(["span"]):
             element.decompose()
-
-        # Replace bullet points
-        for ul in div.find_all("ul"):
-            for li in ul.find_all("li"):
-                li.insert(0, "-")
-
-        text = div.get_text(separator="\n").strip()
-        text = text.replace("\n\n", "")
-        text = text.replace("::marker", "-")
-        text = text.replace("-\n", "- ")
-        text = text.replace("Show less", "").replace("Show more", "")
-        job_description = text
+            
+        # Remove "Show less" and "Show more" links
+        for a in div.find_all("a"):
+            if "Show less" in a.text or "Show more" in a.text:
+                a.decompose()
+            
+        # Get the HTML content
+        html_content = str(div)
+        
+        # Convert HTML to Markdown to preserve formatting
+        markdown_content = html2markdown.convert(html_content)
+        
+        # Clean up the markdown
+        markdown_content = markdown_content.replace("::marker", "-")
+        markdown_content = markdown_content.strip()
+        
+        job_description = markdown_content
     else:
         job_description = "Could not find Job Description"
     
