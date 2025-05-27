@@ -16,3 +16,5 @@ SupabaseUpload/
 .venv/
 .env
 .aider*
+*.ipynb
+test.py
