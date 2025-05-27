@@ -1,0 +1,34 @@
+# For config docs, see https://docs.python.org/3/library/logging.config.html
+version: 1
+disable_existing_loggers: true
+
+formatters:
+  simple:
+    format: "%(asctime)s %(levelname)s: %(message)s"
+  extended:
+    format: "%(asctime)s %(name)s %(levelname)s: %(message)s"
+
+handlers:
+  console_dev:
+    class: logging.StreamHandler
+    level: DEBUG
+    formatter: extended
+    stream: ext://sys.stdout
+
+  console_prod:
+    class: logging.StreamHandler
+    level: INFO
+    formatter: simple
+    stream: ext://sys.stdout
+
+loggers:
+  dev:
+    level: DEBUG
+    handlers: [console_dev]
+    propagate: no
+  deploy:
+    level: INFO
+    handlers: [console_prod]
+root:
+  level: DEBUG
+  handlers: [console_dev]
