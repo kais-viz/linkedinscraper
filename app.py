@@ -225,6 +225,52 @@ def mark_rejected(job_id):
     return jsonify({"success": "Job marked as rejected"}), 200
 
 
+@app.route("/toggle_star/<int:job_id>", methods=["POST"])
+def toggle_star(job_id):
+    print("Star toggled!")
+    if config.get("db_type", "sqlite") == "mysql":
+        # MySQL connection
+        conn = pymysql.connect(
+            host=config["host"],
+            user=config["user"],
+            password=config["password"],
+            database=config["database"],
+        )
+        cursor = conn.cursor()
+        
+        # First get current starred status
+        cursor.execute("SELECT starred FROM jobs WHERE id = %s", (job_id,))
+        result = cursor.fetchone()
+        current_status = result[0] if result and result[0] is not None else 0
+        
+        # Toggle the status
+        new_status = 0 if current_status == 1 else 1
+        
+        query = "UPDATE jobs SET starred = %s WHERE id = %s"
+        print(f"Executing query: {query} with job_id: {job_id} and starred: {new_status}")
+        cursor.execute(query, (new_status, job_id))
+    else:
+        # SQLite connection
+        conn = sqlite3.connect(config["db_path"])
+        cursor = conn.cursor()
+        
+        # First get current starred status
+        cursor.execute("SELECT starred FROM jobs WHERE id = ?", (job_id,))
+        result = cursor.fetchone()
+        current_status = result[0] if result and result[0] is not None else 0
+        
+        # Toggle the status
+        new_status = 0 if current_status == 1 else 1
+        
+        query = "UPDATE jobs SET starred = ? WHERE id = ?"
+        print(f"Executing query: {query} with job_id: {job_id} and starred: {new_status}")
+        cursor.execute(query, (new_status, job_id))
+
+    conn.commit()
+    conn.close()
+    return jsonify({"success": "Job star toggled", "starred": new_status}), 200
+
+
 @app.route("/get_cover_letter/<int:job_id>")
 def get_cover_letter(job_id):
     if config.get("db_type", "sqlite") == "mysql":
@@ -544,4 +590,4 @@ def verify_db_schema():
 
 if __name__ == "__main__":
     verify_db_schema()  # Verify the DB schema before running the app
-    app.run(debug=True, host="0.0.0.0", port=5001)
+    app.run(debug=True, host="0.0.0.0", port=5000)

@@ -23,6 +23,52 @@ async function showJobDetails(jobId) {
     */
 }
 
+// Function to toggle star status for a job
+function toggleStar(jobId) {
+    console.log('Toggling star for job: ' + jobId);
+    fetch('/toggle_star/' + jobId, { method: 'POST' })
+        .then(response => response.json())
+        .then(data => {
+            console.log(data);  // Log the response
+            if (data.success) {
+                var jobCard = document.querySelector(`.job-item[data-job-id="${jobId}"]`);
+                var starButton = document.getElementById('star-job-button');
+                
+                if (data.starred === 1) {
+                    // Update job card in the list
+                    jobCard.classList.add('job-item-starred');
+                    // Add star icon if it doesn't exist
+                    if (!jobCard.querySelector('.job-star-icon')) {
+                        const starIcon = document.createElement('span');
+                        starIcon.className = 'job-star-icon';
+                        starIcon.innerHTML = '★';
+                        jobCard.appendChild(starIcon);
+                    }
+                    
+                    // Update star button
+                    if (starButton) {
+                        starButton.innerHTML = 'Unstar Job';
+                        starButton.classList.add('starred');
+                    }
+                } else {
+                    // Update job card in the list
+                    jobCard.classList.remove('job-item-starred');
+                    // Remove star icon if it exists
+                    const starIcon = jobCard.querySelector('.job-star-icon');
+                    if (starIcon) {
+                        starIcon.remove();
+                    }
+                    
+                    // Update star button
+                    if (starButton) {
+                        starButton.innerHTML = 'Star Job';
+                        starButton.classList.remove('starred');
+                    }
+                }
+            }
+        });
+}
+
 
 
 
@@ -50,6 +96,11 @@ function updateJobDetails(job) {
     // var coverLetterDiv = document.getElementById('bottom-pane'); // Get the cover letter div - commented out
     console.log('Updating job details: ' + job.id); // Log the jobId here
     var html = '<h2 class="job-title">' + job.title + '</h2>';
+    
+    // Add star button next to title
+    var isStarred = job.starred === 1;
+    html += '<button id="star-job-button" class="job-button star-button' + (isStarred ? ' starred' : '') + '" onclick="toggleStar(' + job.id + ')">' + 
+            (isStarred ? 'Unstar Job' : 'Star Job') + '</button>';
     
     // Add date with day of week in bold above company
     var formattedDate = formatDateWithDayOfWeek(job.date);

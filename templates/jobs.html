@@ -148,12 +148,15 @@
                 <h2>Jobs List</h2>
                 
                 {% for job in jobs %}
-                <a class="{% if job.rejected == 1 %}job-item job-item-rejected{% elif job.interview == 1 %}job-item job-item-interview{% elif job.applied == 1 %}job-item job-item-applied{% else %}job-item{% endif %}"  href="#" onclick="event.preventDefault(); showJobDetails('{{ job.id }}')" data-job-id="{{ job.id }}">
+                <a class="{% if job.rejected == 1 %}job-item job-item-rejected{% elif job.interview == 1 %}job-item job-item-interview{% elif job.applied == 1 %}job-item job-item-applied{% else %}job-item{% endif %}{% if job.starred == 1 %} job-item-starred{% endif %}"  href="#" onclick="event.preventDefault(); showJobDetails('{{ job.id }}')" data-job-id="{{ job.id }}">
                     <div class="job-content">
                         <h3>{{ job.title }}</h3>
                         <p>{{ job.company }}, {{ job.location }}</p>
                         <p>{{ job.date }}</p>
                     </div>
+                    {% if job.starred == 1 %}
+                    <span class="job-star-icon">★</span>
+                    {% endif %}
                 </a>
                 {% endfor %}
             </div>
@@ -178,6 +181,33 @@
         </div>
         <script src="/static/job_formatting.js"></script>
         <script src="/static/job_actions.js"></script>
+        <style>
+            /* Star button and icon styles */
+            .star-button {
+                margin-left: 10px;
+                background-color: #f0f0f0 !important;
+                border: 1px solid #ccc;
+                color: #333 !important;
+            }
+            
+            .star-button.starred {
+                background-color: #ffd700 !important;
+                color: #333 !important;
+            }
+            
+            .job-item-starred {
+                position: relative;
+            }
+            
+            .job-star-icon {
+                position: absolute;
+                right: 10px;
+                top: 50%;
+                transform: translateY(-50%);
+                color: #ffd700;
+                font-size: 18px;
+            }
+        </style>
     </body>
     
 </html>
