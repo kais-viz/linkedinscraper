@@ -481,11 +481,15 @@ def get_jobcards(config):
             keywords = quote(query["keywords"])  # URL encode the keywords
             location = quote(query["location"])  # URL encode the location
             for i in range(0, config["pages_to_scrape"]):
-                url = f"https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search?keywords={keywords}&location={location}&f_TPR=&f_WT={query['f_WT']}&geoId=&f_TPR={config['timespan']}&start={25*i}"
+                url = f"https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search?keywords={keywords}&location={location}&f_TPR=&f_WT={query['f_WT']}&geoId=&f_TPR={config['timespan']}&start={10*i}"
                 soup = get_with_retry(url, config)
                 jobs = transform(soup)
+                num_jobs = len(jobs)
                 all_jobs = all_jobs + jobs
-                print("Finished scraping page: ", url)
+                print("Finished scraping page: ", url, f"with {num_jobs} jobs")
+                if num_jobs == 0:
+                    print("No more jobs found, stopping scraping.")
+                    break
     print("Total job cards scraped: ", len(all_jobs))
     all_jobs = remove_duplicates(all_jobs, config)
     print("Total job cards after removing duplicates: ", len(all_jobs))
@@ -541,6 +545,15 @@ def main(config_file):
             job_date = datetime.combine(job_date, time())
             # if job is older than a week, skip it
             if job_date < datetime.now() - timedelta(days=config["days_to_scrape"]):
+                print(
+                    "Skipping job: ",
+                    job["title"],
+                    "at",
+                    job["company"], job["job_url"],
+                    "because it is older than",
+                    config["days_to_scrape"],
+                    "days",
+                )
                 continue
             print(
                 "Found new job: ", job["title"], "at ", job["company"], job["job_url"]
