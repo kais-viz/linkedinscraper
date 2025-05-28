@@ -13,14 +13,11 @@ async function showJobDetails(jobId) {
     const jobData = await response.json();
 
     updateJobDetails(jobData);
-
-    /* Cover letter section commented out
-    if ('cover_letter' in jobData) {
-        updateCoverLetter(jobData.cover_letter);
-    } else {
-        updateCoverLetter(null);
-    }
-    */
+    
+    // Load notes for this job after a short delay to ensure the DOM is updated
+    setTimeout(() => {
+        loadJobNotes(jobId);
+    }, 100);
 }
 
 // Function to toggle star status for a job
@@ -91,7 +88,6 @@ function updateCoverLetter(coverLetter) {
 
 function updateJobDetails(job) {
     var jobDetailsDiv = document.getElementById('job-details');
-    // var coverLetterDiv = document.getElementById('bottom-pane'); // Get the cover letter div - commented out
     console.log('Updating job details: ' + job.id); // Log the jobId here
     var html = '<h2 class="job-title">' + job.title + '</h2>';
     
@@ -126,7 +122,6 @@ function updateJobDetails(job) {
     html += '<button id="star-job-button" class="job-button star-button' + (isStarred ? ' starred' : '') + '" onclick="toggleStar(' + job.id + ')">' + 
             '<span class="star-icon">★</span>' + '</button>';
     html += '<a href="' + job.job_url + '" target="_blank" style="background-color: #0058db;" class="job-button">Go to job</a>';
-    // html += '<button class="job-button" onclick="markAsCoverLetter(' + job.id + ')">Cover Letter</button>';
     html += '<button class="job-button" onclick="markAsApplied(' + job.id + ')">Applied</button>';
     html += '<button class="job-button" style="background-color: #cc130e;" onclick="markAsRejected(' + job.id + ')">Rejected</button>';
     html += '<button class="job-button" style="background-color: #a9b024;" onclick="markAsInterview(' + job.id + ')">Interview</button>';
@@ -141,17 +136,11 @@ function updateJobDetails(job) {
     
     html += '<div class="job-description">' + formattedDescription + '</div>';
 
+    // Only update the job details div, not the notes section
     jobDetailsDiv.innerHTML = html;
-    /* Cover letter section commented out
-    if (job.cover_letter) {
-        // Update the cover letter div with formatted text using markdown
-        var formattedCoverLetter = markdownToHtml(job.cover_letter);
-        coverLetterDiv.innerHTML = '<div class="job-description">' + formattedCoverLetter + '</div>';
-    } else {
-        // Clear the cover letter div if no cover letter exists
-        coverLetterDiv.innerHTML = '';
-    }
-    */
+    
+    // Store the job ID in a data attribute on the page for reference
+    document.body.dataset.currentJobId = job.id;
 }
 
 
@@ -168,17 +157,82 @@ function markAsApplied(jobId) {
         });
 }
 
-function markAsCoverLetter(jobId) {
-    console.log('Marking job as cover letter: ' + jobId)
-    fetch('/get_CoverLetter/' + jobId, { method: 'POST' })
-        .then(response => response.json())
-        .then(data => {
-            console.log(data);  // Log the response
-            if (data.cover_letter) {
-                // Show the job details again, this will also update the cover letter
-                showJobDetails(jobId);
-            }
+// Function to load notes for a job
+async function loadJobNotes(jobId) {
+    console.log('Loading notes for job: ' + jobId);
+    try {
+        const response = await fetch('/get_notes/' + jobId);
+        const data = await response.json();
+        
+        // Get the notes textarea
+        const notesTextarea = document.getElementById('job-notes');
+        
+        // Set the notes content
+        if (notesTextarea) {
+            console.log('Found notes textarea, setting value to:', data.notes);
+            notesTextarea.value = data.notes || '';
+            // Store the current job ID
+            notesTextarea.dataset.jobId = jobId;
+        } else {
+            console.error('Notes textarea not found in the DOM');
+        }
+    } catch (error) {
+        console.error('Error loading notes:', error);
+    }
+}
+
+// Function to save notes for a job
+async function saveNotes() {
+    const notesTextarea = document.getElementById('job-notes');
+    if (!notesTextarea) {
+        console.error('Notes textarea not found');
+        return;
+    }
+    
+    // Get job ID from textarea data attribute or from body data attribute
+    let jobId = notesTextarea.dataset.jobId;
+    if (!jobId) {
+        jobId = document.body.dataset.currentJobId;
+    }
+    
+    if (!jobId) {
+        console.error('No job ID found for notes');
+        return;
+    }
+    
+    console.log('Saving notes for job ID:', jobId);
+    const notes = notesTextarea.value;
+    
+    try {
+        const response = await fetch('/save_notes/' + jobId, {
+            method: 'POST',
+            headers: {
+                'Content-Type': 'application/json'
+            },
+            body: JSON.stringify({ notes: notes })
         });
+        
+        const data = await response.json();
+        
+        if (data.success) {
+            // Show a success message
+            const saveStatus = document.getElementById('save-status');
+            if (saveStatus) {
+                saveStatus.textContent = 'Notes saved!';
+                saveStatus.style.display = 'inline';
+                
+                // Hide the message after 2 seconds
+                setTimeout(() => {
+                    saveStatus.style.display = 'none';
+                }, 2000);
+            }
+            
+            // Update the data attribute with the current job ID
+            notesTextarea.dataset.jobId = jobId;
+        }
+    } catch (error) {
+        console.error('Error saving notes:', error);
+    }
 }
 
 function markAsRejected(jobId) {
@@ -342,28 +396,82 @@ function markAsInterview(jobId) {
         });
 }
 
-/* Resizer functionality commented out since we don't need it without the cover letter section
-var resizer = document.getElementById('resizer');
-var jobDetails = document.getElementById('job-details');
-var bottomPane = document.getElementById('bottom-pane');
-var originalHeight, originalMouseY;
+// Debounce function to limit how often a function is called
+function debounce(func, wait) {
+    let timeout;
+    return function() {
+        const context = this;
+        const args = arguments;
+        clearTimeout(timeout);
+        timeout = setTimeout(() => {
+            func.apply(context, args);
+        }, wait);
+    };
+}
 
-resizer.addEventListener('mousedown', function(e) {
-    e.preventDefault();
-    originalHeight = jobDetails.getBoundingClientRect().height;
-    originalMouseY = e.pageY;
-    document.addEventListener('mousemove', drag);
-    document.addEventListener('mouseup', stopDrag);
+// Add event listener for auto-save on input
+document.addEventListener('click', function(event) {
+    // This will run once after the DOM is fully loaded
+    const notesTextarea = document.getElementById('job-notes');
+    if (notesTextarea && !notesTextarea.hasAutoSave) {
+        notesTextarea.hasAutoSave = true;
+        notesTextarea.addEventListener('input', debounce(saveNotes, 1000));
+    }
 });
 
-function drag(e) {
-    var delta = e.pageY - originalMouseY;
-    jobDetails.style.height = (originalHeight + delta) + "px";
-    bottomPane.style.height = `calc(100% - ${originalHeight + delta}px - 10px)`;
-}
-
-function stopDrag() {
-    document.removeEventListener('mousemove', drag);
-    document.removeEventListener('mouseup', stopDrag);
-}
-*/
+// Initialize page functionality
+document.addEventListener('DOMContentLoaded', function() {
+    // Resizer functionality for notes section
+    var resizer = document.getElementById('resizer');
+    var jobDetails = document.getElementById('job-details');
+    var bottomPane = document.getElementById('bottom-pane');
+    
+    if (resizer && jobDetails && bottomPane) {
+        var originalHeight, originalMouseY;
+        
+        resizer.addEventListener('mousedown', function(e) {
+            e.preventDefault();
+            originalHeight = jobDetails.getBoundingClientRect().height;
+            originalMouseY = e.pageY;
+            document.addEventListener('mousemove', drag);
+            document.addEventListener('mouseup', stopDrag);
+        });
+        
+        function drag(e) {
+            e.preventDefault(); // Prevent text selection during drag
+            var delta = e.pageY - originalMouseY;
+            
+            // Calculate new heights
+            var newJobDetailsHeight = (originalHeight + delta);
+            var containerHeight = jobDetails.parentElement.getBoundingClientRect().height;
+            
+            // Ensure minimum heights for both sections
+            if (newJobDetailsHeight < 200) {
+                newJobDetailsHeight = 200;
+            } else if (containerHeight - newJobDetailsHeight < 200) {
+                newJobDetailsHeight = containerHeight - 200;
+            }
+            
+            // Apply the new heights
+            jobDetails.style.height = newJobDetailsHeight + "px";
+            bottomPane.style.height = (containerHeight - newJobDetailsHeight - 15) + "px"; // Reduced from 25px to 15px
+        }
+        
+        function stopDrag() {
+            document.removeEventListener('mousemove', drag);
+            document.removeEventListener('mouseup', stopDrag);
+        }
+    }
+    
+    // Set up save button event listener
+    const saveButton = document.getElementById('save-notes-button');
+    if (saveButton) {
+        saveButton.addEventListener('click', saveNotes);
+    }
+    
+    // Set up auto-save for notes textarea
+    const notesTextarea = document.getElementById('job-notes');
+    if (notesTextarea) {
+        notesTextarea.addEventListener('input', debounce(saveNotes, 1000));
+    }
+});

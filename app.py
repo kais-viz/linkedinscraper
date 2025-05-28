@@ -1,5 +1,5 @@
 # flake8: noqa e501
-from flask import Flask, render_template, jsonify
+from flask import Flask, render_template, jsonify, request
 import pandas as pd
 import sqlite3
 import pymysql
@@ -272,8 +272,8 @@ def toggle_star(job_id):
     return jsonify({"success": "Job star toggled", "starred": new_status}), 200
 
 
-@app.route("/get_cover_letter/<int:job_id>")
-def get_cover_letter(job_id):
+@app.route("/get_notes/<int:job_id>")
+def get_notes(job_id):
     if config.get("db_type", "sqlite") == "mysql":
         # MySQL connection
         conn = pymysql.connect(
@@ -283,20 +283,20 @@ def get_cover_letter(job_id):
             database=config["database"],
         )
         cursor = conn.cursor()
-        cursor.execute("SELECT cover_letter FROM jobs WHERE id = %s", (job_id,))
-        cover_letter = cursor.fetchone()
+        cursor.execute("SELECT notes FROM jobs WHERE id = %s", (job_id,))
+        notes = cursor.fetchone()
     else:
         # SQLite connection
         conn = sqlite3.connect(config["db_path"])
         cursor = conn.cursor()
-        cursor.execute("SELECT cover_letter FROM jobs WHERE id = ?", (job_id,))
-        cover_letter = cursor.fetchone()
+        cursor.execute("SELECT notes FROM jobs WHERE id = ?", (job_id,))
+        notes = cursor.fetchone()
 
     conn.close()
-    if cover_letter is not None:
-        return jsonify({"cover_letter": cover_letter[0]})
+    if notes is not None:
+        return jsonify({"notes": notes[0] if notes[0] else ""})
     else:
-        return jsonify({"error": "Cover letter not found"}), 404
+        return jsonify({"notes": ""}), 200
 
 
 @app.route("/get_resume/<int:job_id>", methods=["POST"])
@@ -379,9 +379,14 @@ def get_resume(job_id):
     return jsonify({"resume": response}), 200
 
 
-@app.route("/get_CoverLetter/<int:job_id>", methods=["POST"])
-def get_CoverLetter(job_id):
-    print("CoverLetter clicked!")
+@app.route("/save_notes/<int:job_id>", methods=["POST"])
+def save_notes(job_id):
+    print("Saving notes!")
+    
+    # Get the notes from the request
+    data = request.get_json()
+    notes = data.get('notes', '')
+    
     if config.get("db_type", "sqlite") == "mysql":
         # MySQL connection
         conn = pymysql.connect(
@@ -390,93 +395,21 @@ def get_CoverLetter(job_id):
             password=config["password"],
             database=config["database"],
         )
+        cursor = conn.cursor()
+        query = "UPDATE jobs SET notes = %s WHERE id = %s"
+        print(f"Executing query: {query} with job_id: {job_id} and notes: {notes}")
+        cursor.execute(query, (notes, job_id))
     else:
         # SQLite connection
         conn = sqlite3.connect(config["db_path"])
-
-    cursor = conn.cursor()
-
-    def get_chat_gpt(prompt):
-        try:
-            completion = openai.ChatCompletion.create(
-                model=config["OpenAI_Model"],
-                messages=[
-                    {"role": "user", "content": prompt},
-                ],
-            )
-            return completion.choices[0].message.content
-        except Exception as e:
-            print(f"Error connecting to OpenAI: {e}")
-            return None
-
-    cursor.execute(
-        "SELECT job_description, title, company FROM jobs WHERE id = ?", (job_id,)
-    )
-    job_tuple = cursor.fetchone()
-    if job_tuple is not None:
-        column_names = [column[0] for column in cursor.description]
-        job = dict(zip(column_names, job_tuple))
-
-    resume = read_pdf(config["resume_path"])
-
-    # Check if resume is None
-    if resume is None:
-        print("Error: Resume not found or couldn't be read.")
-        return jsonify({"error": "Resume not found or couldn't be read."}), 400
-
-    # Check if OpenAI API key is empty
-    if not config["OpenAI_API_KEY"]:
-        print("Error: OpenAI API key is empty.")
-        return jsonify({"error": "OpenAI API key is empty."}), 400
-
-    openai.api_key = config["OpenAI_API_KEY"]
-    consideration = ""
-    user_prompt = (
-        "You are a career coach with over 15 years of experience helping job seekers land their dream jobs in tech. You are helping a candidate to write a cover letter for the below role. Approach this task in three steps. Step 1. Identify main challenges someone in this position would face day to day. Step 2. Write an attention grabbing hook for your cover letter that highlights your experience and qualifications in a way that shows you empathize and can successfully take on challenges of the role. Consider incorporating specific examples of how you tackled these challenges in your past work, and explore creative ways to express your enthusiasm for the opportunity. Put emphasis on how the candidate can contribute to company as opposed to just listing accomplishments. Keep your hook within 100 words or less. Step 3. Finish writing the cover letter based on the resume and keep it within 250 words. Respond with final cover letter only. \n job description: "
-        + job["job_description"]
-        + "\n company: "
-        + job["company"]
-        + "\n title: "
-        + job["title"]
-        + "\n resume: "
-        + resume
-    )
-    if consideration:
-        user_prompt += "\nConsider incorporating that " + consideration
-
-    response = get_chat_gpt(user_prompt)
-    if response is None:
-        return jsonify({"error": "Failed to get a response from OpenAI."}), 500
-
-    user_prompt2 = (
-        "You are young but experienced career coach helping job seekers land their dream jobs in tech. I need your help crafting a cover letter. Here is a job description: "
-        + job["job_description"]
-        + "\nhere is my resume: "
-        + resume
-        + "\nHere's the cover letter I got so far: "
-        + response
-        + "\nI need you to help me improve it. Let's approach this in following steps. \nStep 1. Please set the formality scale as follows: 1 is conversational English, my initial Cover letter draft is 10. Step 2. Identify three to five ways this cover letter can be improved, and elaborate on each way with at least one thoughtful sentence. Step 4. Suggest an improved cover letter based on these suggestions with the Formality Score set to 7. Avoid subjective qualifiers such as drastic, transformational, etc. Keep the final cover letter within 250 words. Please respond with the final cover letter only."
-    )
-    if user_prompt2:
-        response = get_chat_gpt(user_prompt2)
-        if response is None:
-            return jsonify({"error": "Failed to get a response from OpenAI."}), 500
-
-    if config.get("db_type", "sqlite") == "mysql":
-        query = "UPDATE jobs SET cover_letter = %s WHERE id = %s"
-        print(
-            f"Executing query: {query} with job_id: {job_id} and cover letter: {response}"
-        )
-        cursor.execute(query, (response, job_id))
-    else:
-        query = "UPDATE jobs SET cover_letter = ? WHERE id = ?"
-        print(
-            f"Executing query: {query} with job_id: {job_id} and cover letter: {response}"
-        )
-        cursor.execute(query, (response, job_id))
+        cursor = conn.cursor()
+        query = "UPDATE jobs SET notes = ? WHERE id = ?"
+        print(f"Executing query: {query} with job_id: {job_id} and notes: {notes}")
+        cursor.execute(query, (notes, job_id))
+    
     conn.commit()
     conn.close()
-    return jsonify({"cover_letter": response}), 200
+    return jsonify({"success": True, "notes": notes}), 200
 
 
 def read_jobs_from_db():
@@ -517,10 +450,10 @@ def verify_db_schema():
         )
         if cursor.fetchone()[0] == 1:
             # Check if columns exist
-            cursor.execute("SHOW COLUMNS FROM jobs LIKE 'cover_letter'")
+            cursor.execute("SHOW COLUMNS FROM jobs LIKE 'notes'")
             if cursor.fetchone() is None:
-                cursor.execute("ALTER TABLE jobs ADD COLUMN cover_letter TEXT")
-                print("Added cover_letter column to jobs table")
+                cursor.execute("ALTER TABLE jobs ADD COLUMN notes TEXT")
+                print("Added notes column to jobs table")
 
             cursor.execute("SHOW COLUMNS FROM jobs LIKE 'resume'")
             if cursor.fetchone() is None:
@@ -555,11 +488,11 @@ def verify_db_schema():
         cursor.execute("PRAGMA table_info(jobs)")
         table_info = cursor.fetchall()
 
-        # Check if the "cover_letter" column exists
-        if "cover_letter" not in [column[1] for column in table_info]:
+        # Check if the "notes" column exists
+        if "notes" not in [column[1] for column in table_info]:
             # If it doesn't exist, add it
-            cursor.execute("ALTER TABLE jobs ADD COLUMN cover_letter TEXT")
-            print("Added cover_letter column to jobs table")
+            cursor.execute("ALTER TABLE jobs ADD COLUMN notes TEXT")
+            print("Added notes column to jobs table")
 
         if "resume" not in [column[1] for column in table_info]:
             # If it doesn't exist, add it

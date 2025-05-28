@@ -121,23 +121,31 @@
                 position: relative;
                 overflow-y: auto;
                 flex-grow: 1;
-                height: 100%; /* Changed from 70% to 100% since we're hiding the bottom pane */
+                height: 65%; /* Reduced to make more room for notes */
+                max-height: 65vh; /* Limit maximum height */
             }
 
-            /* Resizer and bottom pane styles commented out */
-            /*
             #resizer {
-                height: 5px;  
-                background: #ccc;
+                height: 4px;  
+                background: #aaa;
                 cursor: row-resize;
+                margin: 10px 0 0 0;
+                border-radius: 4px;
+                position: relative;
+                z-index: 10;
+            }
+            
+            #resizer:hover {
+                background: #888;
             }
 
             #bottom-pane {
                 overflow-y: auto;
-                flex-grow: 1;
-                height: calc(30% - 5px); 
+                flex-grow: 0; /* Don't let it grow */
+                height: 200px; /* Increased fixed height */
+                min-height: 200px; /* Increased minimum height */
+                max-height: 35vh; /* Increased maximum height as percentage of viewport */
             }
-            */
         </style>
     </head>
     <body>
@@ -177,22 +185,48 @@
                 <div id="job-details">
                     <!-- Job details will be inserted here -->
                 </div>
-                <div id="resizer"></div>
-                <!-- Cover Letter section commented out -->
-                <!-- 
-                <h2>Cover Letter</h2>
+                <div id="resizer" style="margin-bottom: -10px;"></div>
+                <h3 style="margin-top: 0; margin-bottom: 5px;">Notes</h3>
                 <div id="bottom-pane">
-                    <div id="cover-letter-pane">
-                        Cover letter will be inserted here
+                    <div id="notes-container" class="notes-container">
+                        <textarea id="job-notes" class="job-notes" placeholder="Add your notes here..."></textarea>
+                        <div class="notes-actions">
+                            <button id="save-notes-button" class="job-button" onclick="saveNotes()">Save Notes</button>
+                            <span id="save-status" style="display: none; color: green; margin-left: 10px;">Notes saved!</span>
+                        </div>
                     </div>
-                    Bottom pane content goes here
                 </div>
-                -->
             </div>
         </div>
         <script src="/static/job_formatting.js"></script>
         <script src="/static/job_actions.js"></script>
         <style>
+            /* Notes container styles */
+            .notes-container {
+                margin-top: 5px;
+                padding: 10px;
+                background-color: #f9f9f9;
+                border-radius: 5px;
+                height: calc(100% - 20px); /* Take up most of the bottom pane */
+            }
+            
+            .job-notes {
+                width: 98%; /* Slightly less than 100% to avoid horizontal scrollbar */
+                height: 100px; /* Smaller height */
+                padding: 10px;
+                margin: 5px 0;
+                border: 1px solid #ddd;
+                border-radius: 4px;
+                resize: vertical;
+                font-family: Arial, sans-serif;
+                overflow-x: hidden; /* Hide horizontal scrollbar */
+            }
+            
+            .notes-actions {
+                display: flex;
+                align-items: center;
+            }
+            
             /* Star button and icon styles */
             .star-button {
                 margin-right: -5px;
