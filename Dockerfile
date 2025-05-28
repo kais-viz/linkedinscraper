@@ -15,15 +15,8 @@ RUN if [ ! -f config.json ]; then cp config_example.json config.json || echo "Pl
 # COPY wait-for-mysql.sh /wait-for-mysql.sh
 # RUN chmod +x /wait-for-mysql.sh
 
-# Update host to 'db' in config.json when running in Docker
-RUN if [ -f config.json ]; then \
-  DB_TYPE=$(jq -r '.db_type // ""' config.json); \
-  if [ "$DB_TYPE" = "mysql" ]; then \
-  TMP=$(mktemp) && \
-  jq '.host = "db"' config.json > "$TMP" && \
-  mv "$TMP" config.json; \
-  fi; \
-  fi
+# Create a file to indicate we're running in Docker
+RUN touch /.dockerenv
 
 EXPOSE 5001
 

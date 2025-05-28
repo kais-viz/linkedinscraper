@@ -8,6 +8,7 @@ import openai
 from pdfminer.high_level import extract_text
 from flask_cors import CORS
 from sqlalchemy import create_engine
+from docker_utils import get_db_host
 
 
 def load_config(file_name):
@@ -64,8 +65,9 @@ def job(job_id):
 def get_all_jobs():
     if config.get("db_type", "sqlite") == "mysql":
         # MySQL connection
+        host = get_db_host(config)
         engine = create_engine(
-            f"mysql+pymysql://{config['user']}:{config['password']}@{config['host']}/{config['database']}",
+            f"mysql+pymysql://{config['user']}:{config['password']}@{host}/{config['database']}",
             pool_recycle=3600,
         )
         query = "SELECT * FROM jobs"
@@ -87,8 +89,9 @@ def get_all_jobs():
 def job_details(job_id):
     if config.get("db_type", "sqlite") == "mysql":
         # MySQL connection
+        host = get_db_host(config)
         conn = pymysql.connect(
-            host=config["host"],
+            host=host,
             user=config["user"],
             password=config["password"],
             database=config["database"],
@@ -123,8 +126,9 @@ def job_details(job_id):
 def hide_job(job_id):
     if config.get("db_type", "sqlite") == "mysql":
         # MySQL connection
+        host = get_db_host(config)
         conn = pymysql.connect(
-            host=config["host"],
+            host=host,
             user=config["user"],
             password=config["password"],
             database=config["database"],
@@ -147,8 +151,9 @@ def mark_applied(job_id):
     print("Applied clicked!")
     if config.get("db_type", "sqlite") == "mysql":
         # MySQL connection
+        host = get_db_host(config)
         conn = pymysql.connect(
-            host=config["host"],
+            host=host,
             user=config["user"],
             password=config["password"],
             database=config["database"],
@@ -175,8 +180,9 @@ def mark_interview(job_id):
     print("Interview clicked!")
     if config.get("db_type", "sqlite") == "mysql":
         # MySQL connection
+        host = get_db_host(config)
         conn = pymysql.connect(
-            host=config["host"],
+            host=host,
             user=config["user"],
             password=config["password"],
             database=config["database"],
@@ -203,8 +209,9 @@ def mark_rejected(job_id):
     print("Rejected clicked!")
     if config.get("db_type", "sqlite") == "mysql":
         # MySQL connection
+        host = get_db_host(config)
         conn = pymysql.connect(
-            host=config["host"],
+            host=host,
             user=config["user"],
             password=config["password"],
             database=config["database"],
@@ -231,8 +238,9 @@ def toggle_star(job_id):
     print("Star toggled!")
     if config.get("db_type", "sqlite") == "mysql":
         # MySQL connection
+        host = get_db_host(config)
         conn = pymysql.connect(
-            host=config["host"],
+            host=host,
             user=config["user"],
             password=config["password"],
             database=config["database"],
@@ -276,8 +284,9 @@ def toggle_star(job_id):
 def get_notes(job_id):
     if config.get("db_type", "sqlite") == "mysql":
         # MySQL connection
+        host = get_db_host(config)
         conn = pymysql.connect(
-            host=config["host"],
+            host=host,
             user=config["user"],
             password=config["password"],
             database=config["database"],
@@ -304,8 +313,9 @@ def get_resume(job_id):
     print("Resume clicked!")
     if config.get("db_type", "sqlite") == "mysql":
         # MySQL connection
+        host = get_db_host(config)
         conn = pymysql.connect(
-            host=config["host"],
+            host=host,
             user=config["user"],
             password=config["password"],
             database=config["database"],
@@ -389,8 +399,9 @@ def save_notes(job_id):
     
     if config.get("db_type", "sqlite") == "mysql":
         # MySQL connection
+        host = get_db_host(config)
         conn = pymysql.connect(
-            host=config["host"],
+            host=host,
             user=config["user"],
             password=config["password"],
             database=config["database"],
@@ -415,8 +426,9 @@ def save_notes(job_id):
 def read_jobs_from_db():
     if config.get("db_type", "sqlite") == "mysql":
         # MySQL connection using SQLAlchemy for pandas
+        host = get_db_host(config)
         engine = create_engine(
-            f"mysql+pymysql://{config['user']}:{config['password']}@{config['host']}/{config['database']}",
+            f"mysql+pymysql://{config['user']}:{config['password']}@{host}/{config['database']}",
             pool_recycle=3600,
         )
         query = "SELECT * FROM jobs WHERE hidden = 0"
@@ -436,8 +448,9 @@ def read_jobs_from_db():
 def verify_db_schema():
     if config.get("db_type", "sqlite") == "mysql":
         # MySQL connection
+        host = get_db_host(config)
         conn = pymysql.connect(
-            host=config["host"],
+            host=host,
             user=config["user"],
             password=config["password"],
             database=config["database"],

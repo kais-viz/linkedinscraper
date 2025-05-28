@@ -247,16 +247,22 @@ def create_connection(config):
     engine = None
     try:
         if config.get("db_type", "sqlite") == "mysql":
+            # Import the get_db_host function
+            from docker_utils import get_db_host
+            
+            # Get the appropriate host
+            host = get_db_host(config)
+            
             # MySQL connection
             conn = pymysql.connect(
-                host=config["host"],
+                host=host,
                 user=config["user"],
                 password=config["password"],
                 database=config["database"],
             )
             # Create SQLAlchemy engine for pandas
             engine = create_engine(
-                f"mysql+pymysql://{config['user']}:{config['password']}@{config['host']}/{config['database']}",
+                f"mysql+pymysql://{config['user']}:{config['password']}@{host}/{config['database']}",
                 pool_recycle=3600,
             )
         else:

@@ -11,15 +11,38 @@
   "OpenAI_Model": "",
   "resume_path": "full local path to your resume in PDF format",
 
-  "search_queries": [    
-    {"keywords": "Python developer", "location": "Los Angeles", "f_WT": ""},
-    {"keywords": "Python developer", "location": "USA", "f_WT": "2"}
-
+  "search_queries": [
+    { "keywords": "Python developer", "location": "Los Angeles", "f_WT": "" },
+    { "keywords": "Python developer", "location": "USA", "f_WT": "2" }
   ],
   "desc_words": [
-    "agriculture", "farm", "food safety", "manufacture", "manufacturing", "Bilingual", "chemistry", "FDA", "ICH Guideline", "21 CFR 210",
-    "biological sciences", "clinical research", "clinical trials", "drug safety", "ISO 9001", "ISO9001", "Life Sciences", "Biotech", "safety standards", "gt.school", "degree in accounting", "degree in Finance", "ISQM", "ISQM1",
-    "QA/QC", "Electrical Engineering", "IS09001"
+    "agriculture",
+    "farm",
+    "food safety",
+    "manufacture",
+    "manufacturing",
+    "Bilingual",
+    "chemistry",
+    "FDA",
+    "ICH Guideline",
+    "21 CFR 210",
+    "biological sciences",
+    "clinical research",
+    "clinical trials",
+    "drug safety",
+    "ISO 9001",
+    "ISO9001",
+    "Life Sciences",
+    "Biotech",
+    "safety standards",
+    "gt.school",
+    "degree in accounting",
+    "degree in Finance",
+    "ISQM",
+    "ISQM1",
+    "QA/QC",
+    "Electrical Engineering",
+    "IS09001"
   ],
   "title_exclude": ["frontend", "fron end", "game"],
   "title_include": ["python", "developer", "backend", "BE", "engineer"],
@@ -30,7 +53,8 @@
   "jobs_tablename": "jobs",
   "filtered_jobs_tablename": "filtered_jobs",
   "db_type": "mysql",
-  "host": "localhost",
+  "host_local": "localhost",
+  "host_docker": "db",
   "user": "your_mysql_username",
   "password": "your_mysql_password",
   "database": "your_database_name",
@@ -38,5 +62,4 @@
   "rounds": 1,
   "days_to_scrape": 10,
   "app_table": "jobs"
-  }
-  
+}

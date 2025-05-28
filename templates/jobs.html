@@ -121,8 +121,8 @@
                 position: relative;
                 overflow-y: auto;
                 flex-grow: 1;
-                height: 65%; /* Reduced to make more room for notes */
-                max-height: 65vh; /* Limit maximum height */
+                height: 70%; /* Reduced to make more room for notes */
+                max-height: 70vh; /* Limit maximum height */
             }
 
             #resizer {
@@ -181,12 +181,12 @@
             </div>
             <div class="column">
                 <!-- Placeholder for job details -->
-                <h2>Job Details</h2>
+                <!-- <h2>Job Details</h2> -->
                 <div id="job-details">
                     <!-- Job details will be inserted here -->
                 </div>
                 <div id="resizer" style="margin-bottom: -10px;"></div>
-                <h3 style="margin-top: 0; margin-bottom: 5px;">Notes</h3>
+                <h3 style="margin-top: 6px; margin-bottom: 5px;">Notes</h3>
                 <div id="bottom-pane">
                     <div id="notes-container" class="notes-container">
                         <textarea id="job-notes" class="job-notes" placeholder="Add your notes here..."></textarea>
@@ -207,7 +207,7 @@
                 padding: 10px;
                 background-color: #f9f9f9;
                 border-radius: 5px;
-                height: calc(100% - 20px); /* Take up most of the bottom pane */
+                height: calc(100% - 25px); /* Take up most of the bottom pane */
             }
             
             .job-notes {
