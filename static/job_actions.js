@@ -282,12 +282,38 @@ function hideJob(jobId) {
         });
 }
 
+// Function to toggle visibility of applied/interview/rejected jobs
+function toggleAppliedJobs() {
+    const toggleButton = document.getElementById('toggle-applied-button');
+    const jobItems = document.querySelectorAll('.job-item');
+    
+    // Toggle the active state of the button
+    toggleButton.classList.toggle('active');
+    const hideApplied = toggleButton.classList.contains('active');
+    
+    jobItems.forEach(jobItem => {
+        // Check if the job has been applied to, interviewed for, or rejected
+        const isApplied = jobItem.classList.contains('job-item-applied');
+        const isInterview = jobItem.classList.contains('job-item-interview');
+        const isRejected = jobItem.classList.contains('job-item-rejected');
+        
+        if (hideApplied && (isApplied || isInterview || isRejected)) {
+            jobItem.classList.add('applied-hidden');
+        } else {
+            jobItem.classList.remove('applied-hidden');
+        }
+    });
+    
+    // Update the job count
+    updateJobCount();
+}
+
 // Function to update the job count
 function updateJobCount() {
     const jobCountElement = document.getElementById('job-count');
     if (jobCountElement) {
         // Count jobs that are visible (not hidden by any filter)
-        const visibleJobs = document.querySelectorAll('.job-item:not([style*="display: none"]):not(.search-hidden):not(.location-hidden)').length;
+        const visibleJobs = document.querySelectorAll('.job-item:not([style*="display: none"]):not(.search-hidden):not(.location-hidden):not(.applied-hidden)').length;
         jobCountElement.textContent = visibleJobs;
     }
 }
@@ -421,6 +447,15 @@ document.addEventListener('click', function(event) {
 
 // Initialize page functionality
 document.addEventListener('DOMContentLoaded', function() {
+    // Toggle Applied button functionality
+    const toggleAppliedButton = document.getElementById('toggle-applied-button');
+    if (toggleAppliedButton) {
+        toggleAppliedButton.addEventListener('click', toggleAppliedJobs);
+        // Set initial state to active (hide applied jobs by default)
+        toggleAppliedButton.classList.add('active');
+        toggleAppliedJobs();
+    }
+    
     // Resizer functionality for notes section
     var resizer = document.getElementById('resizer');
     var jobDetails = document.getElementById('job-details');
