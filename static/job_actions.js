@@ -287,8 +287,13 @@ function toggleAppliedJobs() {
     const toggleButton = document.getElementById('toggle-applied-button');
     const jobItems = document.querySelectorAll('.job-item');
     
-    // Toggle the active state of the button
-    toggleButton.classList.toggle('active');
+    // Toggle the active state of the button only if this is a user click
+    // (not the initial page load)
+    if (toggleAppliedJobs.initialCall !== true) {
+        toggleButton.classList.toggle('active');
+    }
+    toggleAppliedJobs.initialCall = false;
+    
     const hideApplied = toggleButton.classList.contains('active');
     
     jobItems.forEach(jobItem => {
@@ -453,7 +458,12 @@ document.addEventListener('DOMContentLoaded', function() {
         toggleAppliedButton.addEventListener('click', toggleAppliedJobs);
         // Set initial state to active (hide applied jobs by default)
         toggleAppliedButton.classList.add('active');
-        toggleAppliedJobs();
+        // Mark this as the initial call to prevent toggling the button state
+        toggleAppliedJobs.initialCall = true;
+        // Call toggleAppliedJobs immediately to hide applied jobs on page load
+        setTimeout(() => {
+            toggleAppliedJobs();
+        }, 100);
     }
     
     // Resizer functionality for notes section
