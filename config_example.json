@@ -61,5 +61,6 @@
   "pages_to_scrape": 10,
   "rounds": 1,
   "days_to_scrape": 10,
+  "jobs_per_page": 10,
   "app_table": "jobs"
 }

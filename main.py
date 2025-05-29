@@ -487,7 +487,7 @@ def get_jobcards(config):
             keywords = quote(query["keywords"])  # URL encode the keywords
             location = quote(query["location"])  # URL encode the location
             for i in range(0, config["pages_to_scrape"]):
-                url = f"https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search?keywords={keywords}&location={location}&f_TPR=&f_WT={query['f_WT']}&geoId=&f_TPR={config['timespan']}&start={10*i}"
+                url = f"https://www.linkedin.com/jobs-guest/jobs/api/seeMoreJobPostings/search?keywords={keywords}&location={location}&f_TPR=&f_WT={query['f_WT']}&geoId=&f_TPR={config['timespan']}&start={config['jobs_per_page']*i}"
                 soup = get_with_retry(url, config)
                 jobs = transform(soup)
                 num_jobs = len(jobs)
