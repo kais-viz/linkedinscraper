@@ -178,6 +178,28 @@ def remove_irrelevant_jobs(joblist, config):
         [
             job
             for job in new_joblist
+            if not any(
+                word.lower() in job["location"].lower() for word in config["location_exclude"]
+            )
+        ]
+        if len(config["location_exclude"]) > 0
+        else new_joblist
+    )
+    new_joblist = (
+        [
+            job
+            for job in new_joblist
+            if any(
+                word.lower() in job["location"].lower() for word in config["location_include"]
+            )
+        ]
+        if len(config["location_include"]) > 0
+        else new_joblist
+    )
+    new_joblist = (
+        [
+            job
+            for job in new_joblist
             if safe_detect(job["job_description"]) in config["languages"]
         ]
         if len(config["languages"]) > 0

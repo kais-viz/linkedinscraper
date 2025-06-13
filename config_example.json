@@ -44,6 +44,15 @@
     "Electrical Engineering",
     "IS09001"
   ],
+  "location_include": ["Netherlands", "Nederlands"],
+  "location_exclude": [
+    "Den Haag",
+    "Tilburg",
+    "Breda",
+    "Leiden",
+    "Delft",
+    "Groningen"
+  ],
   "title_exclude": ["frontend", "fron end", "game"],
   "title_include": ["python", "developer", "backend", "BE", "engineer"],
   "company_exclude": ["ClickJobs.io"],
